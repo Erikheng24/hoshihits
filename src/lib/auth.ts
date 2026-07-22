@@ -61,6 +61,8 @@ export function clearSessionCookie() {
 /** Per-module access map. OWNER always allowed. */
 export const ACCESS: Record<string, Role[]> = {
   dashboard: ["OWNER", "MANAGER", "CASHIER", "INVENTORY", "ACCOUNTANT"],
+  profile: ["OWNER", "MANAGER", "CASHIER", "INVENTORY", "ACCOUNTANT"],
+  lookup: ["OWNER", "MANAGER", "CASHIER", "INVENTORY"],
   pos: ["OWNER", "MANAGER", "CASHIER"],
   inventory: ["OWNER", "MANAGER", "INVENTORY"],
   singles: ["OWNER", "MANAGER", "INVENTORY"],

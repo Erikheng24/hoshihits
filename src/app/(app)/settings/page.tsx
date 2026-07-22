@@ -4,6 +4,7 @@ import { shortDateTime } from "@/lib/format";
 import { PageHeader, Card, Badge } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { LogoUpload } from "@/components/LogoUpload";
+import { getReceiptConfig } from "@/lib/receipt-config";
 import { saveSettingsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 export default function SettingsPage() {
   requireModule("settings");
   const db = getDb();
+  const rc = getReceiptConfig();
   const integrations = [
     { key: "PSA", label: "PSA graded lookups", live: !!process.env.PSA_API_TOKEN, hint: "psacard.com/publicapi" },
     { key: "UPC", label: "Box barcode lookups", live: !!process.env.UPC_API_KEY, hint: "upcitemdb.com" },
@@ -58,6 +60,48 @@ export default function SettingsPage() {
             <label className="field"><span>Address</span><input name="store_address" className="input" defaultValue={settings.store_address ?? ""} /></label>
             <label className="field"><span>Phone</span><input name="store_phone" className="input num" defaultValue={settings.store_phone ?? ""} /></label>
             <label className="field"><span>Receipt footer</span><input name="receipt_footer" className="input" defaultValue={settings.receipt_footer ?? ""} /></label>
+
+            {/* ---- Receipt layout ---- */}
+            <div className="pt-2">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-mist mb-1">Receipt layout</p>
+              <div className="gold-rule mb-3" />
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="field"><span>Logo size ({rc.logoSize}px)</span>
+                  <input name="receipt_logo_size" type="range" min={0} max={120} step={4}
+                         defaultValue={rc.logoSize} className="w-full accent-[#D4AF37]" />
+                </label>
+                <label className="field"><span>Text size</span>
+                  <select name="receipt_font_scale" className="input" defaultValue={String(rc.fontScale)}>
+                    <option value="0.9">Small</option>
+                    <option value="1">Normal</option>
+                    <option value="1.15">Large</option>
+                    <option value="1.3">Extra large</option>
+                  </select>
+                </label>
+              </div>
+              <p className="text-[11px] text-fog -mt-1 mb-3">Set logo size to 0 to hide it.</p>
+
+              <label className="field"><span>Extra header line (optional)</span>
+                <input name="receipt_header_note" className="input" defaultValue={rc.headerNote}
+                       placeholder="e.g. Facebook: HoshiHits / Tel 086 294 739" />
+              </label>
+
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                {[
+                  ["receipt_show_tagline", "Show tagline", rc.showTagline],
+                  ["receipt_show_address", "Show address", rc.showAddress],
+                  ["receipt_show_phone", "Show phone", rc.showPhone],
+                  ["receipt_show_staff", "Show staff name", rc.showStaff],
+                ].map(([name, label, checked]) => (
+                  <label key={String(name)} className="flex items-center gap-2 text-[13px] text-mist">
+                    <input type="checkbox" name={String(name)} defaultChecked={Boolean(checked)} className="accent-[#D4AF37]" />
+                    {String(label)}
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="flex justify-end">
               <button className="btn-gold px-5 py-2 text-sm">Save settings</button>
             </div>

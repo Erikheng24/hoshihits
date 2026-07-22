@@ -76,6 +76,28 @@ export default function ReportsPage({ searchParams }: { searchParams: { days?: s
     )
     .all() as any[];
 
+  // Movers: units sold this period vs the period immediately before it.
+  const movers = db
+    .prepare(
+      `SELECT si.name,
+              SUM(CASE WHEN date(s.created_at) >= date('now','localtime','-${days - 1} day') THEN si.qty ELSE 0 END) AS now_qty,
+              SUM(CASE WHEN date(s.created_at) <  date('now','localtime','-${days - 1} day')
+                        AND date(s.created_at) >= date('now','localtime','-${days * 2 - 1} day') THEN si.qty ELSE 0 END) AS prev_qty
+       FROM sale_items si JOIN sales s ON s.id = si.sale_id
+       WHERE s.status='completed' AND date(s.created_at) >= date('now','localtime','-${days * 2 - 1} day')
+       GROUP BY si.name
+       HAVING now_qty > 0 OR prev_qty > 0`
+    )
+    .all() as { name: string; now_qty: number; prev_qty: number }[];
+
+  const scored = movers.map((m) => ({
+    ...m,
+    delta: m.now_qty - m.prev_qty,
+    pct: m.prev_qty > 0 ? ((m.now_qty - m.prev_qty) / m.prev_qty) * 100 : m.now_qty > 0 ? 100 : 0,
+  }));
+  const rising = scored.filter((m) => m.delta > 0).sort((a, b) => b.delta - a.delta || b.pct - a.pct).slice(0, 6);
+  const falling = scored.filter((m) => m.delta < 0).sort((a, b) => a.delta - b.delta || a.pct - b.pct).slice(0, 6);
+
   const dailyPts = daily.map((p) => ({
     label: new Date(p.day + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     value: p.revenue,
@@ -127,6 +149,34 @@ export default function ReportsPage({ searchParams }: { searchParams: { days?: s
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
+        <Card title={`Trending up — vs previous ${days} days`}>
+          <ul className="px-5 pb-4 space-y-2.5">
+            {rising.length === 0 && <li className="text-fog text-sm py-4 text-center">Nothing rising yet.</li>}
+            {rising.map((m) => (
+              <li key={m.name} className="flex items-center gap-3 text-sm">
+                <Icon name="arrowUp" className="w-4 h-4 text-jade shrink-0" />
+                <span className="flex-1 min-w-0 truncate text-mist">{m.name}</span>
+                <span className="num text-fog text-[12px] whitespace-nowrap">{m.prev_qty} → {m.now_qty}</span>
+                <span className="num text-jade font-semibold w-14 text-right">+{m.delta}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <Card title={`Slowing down — vs previous ${days} days`}>
+          <ul className="px-5 pb-4 space-y-2.5">
+            {falling.length === 0 && <li className="text-fog text-sm py-4 text-center">Nothing slowing down.</li>}
+            {falling.map((m) => (
+              <li key={m.name} className="flex items-center gap-3 text-sm">
+                <Icon name="arrowDown" className="w-4 h-4 text-ruby shrink-0" />
+                <span className="flex-1 min-w-0 truncate text-mist">{m.name}</span>
+                <span className="num text-fog text-[12px] whitespace-nowrap">{m.prev_qty} → {m.now_qty}</span>
+                <span className="num text-ruby font-semibold w-14 text-right">{m.delta}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
         <Card title="Category Mix">
           <div className="overflow-x-auto">
             <table className="tbl">

@@ -4,6 +4,7 @@ import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money, shortDate, shortDateTime } from "@/lib/format";
 import { ReceiptActions } from "@/components/ReceiptActions";
+import { getReceiptConfig } from "@/lib/receipt-config";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default function PreorderReceiptPage({ params }: { params: { id: string }
   const setting = (k: string) =>
     (db.prepare("SELECT value FROM settings WHERE key=?").get(k) as { value: string } | undefined)?.value ?? "";
 
+  const cfg = getReceiptConfig();
   const total = p.unit_price * p.qty;
   const balance = Math.max(0, total - p.deposit);
   const open = !["collected", "cancelled"].includes(p.status);
@@ -44,18 +46,24 @@ export default function PreorderReceiptPage({ params }: { params: { id: string }
         <ReceiptActions fileName={`preorder-${p.number}`} />
       </div>
 
-      <div className="card p-6 print-receipt">
+      <div className="card p-6 print-receipt" style={{ fontSize: `${cfg.fontScale}em` }}>
         <div className="text-center mb-5">
-          {setting("logo").startsWith("data:image/") && (
+          {cfg.logoSize > 0 && setting("logo").startsWith("data:image/") && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={setting("logo")} alt="" className="w-14 h-14 rounded-lg object-cover mx-auto mb-2" />
+            <img
+              src={setting("logo")}
+              alt=""
+              style={{ width: cfg.logoSize, height: cfg.logoSize }}
+              className="rounded-lg object-cover mx-auto mb-2"
+            />
           )}
           <p className="font-display tracking-[0.14em] text-gold-grad text-lg">
             {(setting("store_name") || "HoshiHits").toUpperCase()}
           </p>
-          <p className="text-[11px] text-fog mt-1">{setting("store_tagline")}</p>
-          <p className="text-[11px] text-fog">{setting("store_address")}</p>
-          <p className="text-[11px] text-fog">{setting("store_phone")}</p>
+          {cfg.showTagline && <p className="text-[11px] text-fog mt-1">{setting("store_tagline")}</p>}
+          {cfg.showAddress && <p className="text-[11px] text-fog">{setting("store_address")}</p>}
+          {cfg.showPhone && <p className="text-[11px] text-fog">{setting("store_phone")}</p>}
+          {cfg.headerNote && <p className="text-[11px] text-mist mt-1">{cfg.headerNote}</p>}
         </div>
 
         <p className="text-center text-[11px] uppercase tracking-[0.22em] text-gold border-y border-dashed border-edge py-1.5 mb-3">
@@ -66,7 +74,7 @@ export default function PreorderReceiptPage({ params }: { params: { id: string }
           <div className="flex justify-between"><span>Preorder</span><span>{p.number}</span></div>
           <div className="flex justify-between"><span>Date</span><span>{shortDateTime(p.created_at)}</span></div>
           <div className="flex justify-between"><span>Expected</span><span>{shortDate(p.expected_date)}</span></div>
-          <div className="flex justify-between"><span>Taken by</span><span>{p.staff ?? "—"}</span></div>
+          {cfg.showStaff && <div className="flex justify-between"><span>Taken by</span><span>{p.staff ?? "—"}</span></div>}
         </div>
 
         <div className="border-t border-dashed border-edge pt-2 mb-3 text-[12px]">

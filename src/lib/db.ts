@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('OWNER','MANAGER','CASHIER','INVENTORY','ACCOUNTANT')),
   active INTEGER NOT NULL DEFAULT 1,
+  avatar TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -229,6 +230,7 @@ function migrate(db: Database.Database) {
     if (customerCols.includes(dead)) db.exec(`ALTER TABLE customers DROP COLUMN ${dead}`);
   }
   // Columns added after the initial schema — add if an older DB predates them.
+  if (!cols("users").includes("avatar")) db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT`);
   const productCols = cols("products");
   if (!productCols.includes("image")) db.exec(`ALTER TABLE products ADD COLUMN image TEXT`);
   if (!productCols.includes("notes")) db.exec(`ALTER TABLE products ADD COLUMN notes TEXT`);

@@ -17,6 +17,7 @@ export const NAV: NavItem[] = [
   { key: "inventory", href: "/inventory", label: "Inventory", icon: "inventory", section: "Catalog" },
   { key: "singles", href: "/singles", label: "Singles", icon: "card", section: "Catalog" },
   { key: "graded", href: "/graded", label: "Graded Cards", icon: "graded", section: "Catalog" },
+  { key: "lookup", href: "/lookup", label: "Card Lookup", icon: "search", section: "Catalog" },
 
   { key: "suppliers", href: "/suppliers", label: "Suppliers", icon: "supplier", section: "Operations" },
   { key: "purchase-orders", href: "/purchase-orders", label: "Purchase Orders", icon: "po", section: "Operations" },
