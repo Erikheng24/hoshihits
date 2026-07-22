@@ -181,8 +181,10 @@ label.field > span {
    Sized for both A4 and 80mm thermal rolls.
 --------------------------------------------------------------------------- */
 @media print {
+  /* Sized for 57/58mm thermal rolls (the common mini Bluetooth printers).
+     On A4/Letter it simply prints as a narrow centred receipt column. */
   @page {
-    margin: 8mm;
+    margin: 4mm;
   }
 
   .no-print,
@@ -215,7 +217,7 @@ label.field > span {
     left: 0;
     top: 0;
     width: 100%;
-    max-width: 80mm;
+    max-width: 56mm; /* fits a 57/58mm roll's printable area */
     margin: 0 auto;
     padding: 0 !important;
     border: 0 !important;
