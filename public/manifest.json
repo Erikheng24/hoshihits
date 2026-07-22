@@ -1,0 +1,17 @@
+{
+  "name": "HoshiHits Card Shop ERP",
+  "short_name": "HoshiHits",
+  "description": "ERP + POS for HoshiHits Card Shop",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

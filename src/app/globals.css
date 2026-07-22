@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #080808;
+  --panel: #151515;
+  --panel-2: #1c1c1c;
+  --edge: #262626;
+  --gold: #d4af37;
+  --gold-soft: #e8cc6d;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--ink);
+  color: #f2f2f2;
+  font-feature-settings: "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient backdrop: faint gold aurora + fine grain */
+.backdrop-stars {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 480px at 85% -10%, rgba(212, 175, 55, 0.07), transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgba(212, 175, 55, 0.05), transparent 60%),
+    var(--ink);
+}
+.backdrop-stars::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Panels */
+.card {
+  @apply bg-panel border border-edge rounded-card shadow-card;
+}
+.card-hover {
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  border-color: rgba(212, 175, 55, 0.35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 16px 40px -16px rgba(0, 0, 0, 0.9);
+}
+
+.glass {
+  background: rgba(21, 21, 21, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Gold hairline used under section titles */
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.6), rgba(212, 175, 55, 0.08) 60%, transparent);
+}
+
+.text-gold-grad {
+  background: linear-gradient(120deg, #f0d98a 0%, #d4af37 45%, #9a7d1f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Buttons */
+.btn-gold {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold text-ink;
+  background: linear-gradient(160deg, #ecd583, #d4af37 55%, #b8942a);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 8px 20px -8px rgba(212, 175, 55, 0.5);
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.btn-gold:hover {
+  filter: brightness(1.07);
+}
+.btn-gold:active {
+  transform: translateY(1px);
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium text-mist border border-edge bg-panel-2;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.btn-ghost:hover {
+  color: #fff;
+  border-color: #3a3a3a;
+}
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium text-ruby border border-ruby/30 bg-ruby/10;
+  transition: background 0.15s ease;
+}
+.btn-danger:hover {
+  background: rgba(248, 113, 113, 0.18);
+}
+
+/* Inputs */
+.input {
+  @apply w-full rounded-lg bg-panel-2 border border-edge px-3 py-2 text-sm text-white placeholder:text-fog outline-none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input:focus {
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+}
+select.input option {
+  background: #1c1c1c;
+}
+
+label.field > span {
+  @apply block text-[11px] uppercase tracking-[0.14em] text-fog mb-1.5;
+}
+
+/* Tables */
+.tbl {
+  @apply w-full text-sm;
+}
+.tbl thead th {
+  @apply text-left text-[11px] uppercase tracking-[0.14em] text-fog font-medium px-4 py-3 border-b border-edge whitespace-nowrap;
+}
+.tbl tbody td {
+  @apply px-4 py-3 border-b border-edge/60 align-middle;
+}
+.tbl tbody tr {
+  transition: background 0.12s ease;
+}
+.tbl tbody tr:hover {
+  background: rgba(212, 175, 55, 0.035);
+}
+
+/* Money figures */
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Badges */
+.badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 8px;
+  border: 2px solid var(--ink);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Staggered entrance for card grids */
+.stagger > * {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.1s; }
+.stagger > *:nth-child(4) { animation-delay: 0.14s; }
+.stagger > *:nth-child(5) { animation-delay: 0.18s; }
+.stagger > *:nth-child(6) { animation-delay: 0.22s; }
+.stagger > *:nth-child(7) { animation-delay: 0.26s; }
+.stagger > *:nth-child(8) { animation-delay: 0.3s; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+  .print-receipt { display: block !important; }
+}
