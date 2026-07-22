@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "./icons";
+import { Portal } from "./Portal";
 import { money } from "@/lib/format";
 import { parseScan, type ItemKind, type ScanFields, type EnrichResult } from "@/lib/scan";
 import type { QuickAddInput } from "@/app/(app)/inventory/enrich";
@@ -256,9 +257,10 @@ export function UnifiedScanner({
   const typeLabel = TYPES.find((t) => t.kind === kind)!.label;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/85 animate-fadein" onClick={onClose} />
-      <div className="relative card shadow-pop w-full max-w-lg p-5 animate-rise max-h-[94vh] overflow-y-auto">
+    <Portal>
+    <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/85 animate-fadein" onClick={onClose} />
+      <div className="relative card shadow-pop w-full max-w-lg p-5 animate-rise my-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display text-lg tracking-wide text-white flex items-center gap-2">
             <Icon name="scan" className="w-5 h-5 text-gold" />
@@ -477,5 +479,6 @@ export function UnifiedScanner({
         )}
       </div>
     </div>
+    </Portal>
   );
 }
