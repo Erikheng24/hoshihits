@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money, shortDate, shortDateTime } from "@/lib/format";
-import { PrintButton } from "@/components/PrintButton";
+import { ReceiptActions } from "@/components/ReceiptActions";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +40,8 @@ export default function PreorderReceiptPage({ params }: { params: { id: string }
   return (
     <div className="max-w-sm mx-auto">
       <div className="flex items-center justify-between mb-4 no-print">
-        <Link href="/preorders" className="btn-ghost px-3 py-2 text-sm">← Back to preorders</Link>
-        <PrintButton />
+        <Link href="/preorders" className="btn-ghost px-3 py-2 text-sm">← Back</Link>
+        <ReceiptActions fileName={`preorder-${p.number}`} />
       </div>
 
       <div className="card p-6 print-receipt">

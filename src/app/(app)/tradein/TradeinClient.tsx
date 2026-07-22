@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
+import { Portal } from "@/components/Portal";
 import { money } from "@/lib/format";
 import { createTradeinAction, type TradeLine } from "./actions";
 
@@ -62,9 +63,10 @@ export function TradeinClient({ customers }: { customers: { id: number; name: st
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/75 animate-fadein" onClick={() => !pending && setOpen(false)} />
-          <div className="relative card shadow-pop w-full max-w-3xl p-6 animate-rise max-h-[90vh] overflow-y-auto">
+        <Portal>
+        <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/85 animate-fadein" onClick={() => !pending && setOpen(false)} />
+          <div className="relative card shadow-pop w-full max-w-3xl p-5 sm:p-6 animate-rise my-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display text-lg tracking-wide text-white">{done ? "Intake Complete" : "Buylist / Trade-In Intake"}</h2>
               <button onClick={() => setOpen(false)} className="text-fog hover:text-white"><Icon name="x" className="w-5 h-5" /></button>
@@ -96,31 +98,56 @@ export function TradeinClient({ customers }: { customers: { id: number; name: st
                   </label>
                 </div>
 
-                <div className="space-y-2 mb-3">
-                  <div className="hidden sm:grid grid-cols-[1fr_120px_80px_60px_90px_32px] gap-2 text-[10px] uppercase tracking-[0.14em] text-fog px-1">
+                <div className="space-y-3 sm:space-y-2 mb-4">
+                  {/* Column headings only make sense once the row is actually laid out in columns */}
+                  <div className="hidden md:grid grid-cols-[1fr_130px_88px_70px_100px_36px] gap-2 text-[10px] uppercase tracking-[0.14em] text-fog px-1">
                     <span>Card</span><span>Game</span><span>Cond.</span><span>Qty</span><span>Value ($)</span><span />
                   </div>
+
                   {rows.map((r, i) => (
-                    <div key={i} className="grid sm:grid-cols-[1fr_120px_80px_60px_90px_32px] grid-cols-2 gap-2">
-                      <input className="input col-span-2 sm:col-span-1" placeholder="Card name" value={r.name} onChange={(e) => update(i, { name: e.target.value })} />
-                      <select className="input" value={r.game} onChange={(e) => update(i, { game: e.target.value })}>
-                        {GAMES.map((g) => <option key={g}>{g}</option>)}
-                      </select>
-                      <select className="input" value={r.condition} onChange={(e) => update(i, { condition: e.target.value })}>
-                        {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
-                      </select>
-                      <input className="input num" type="number" min={1} value={r.qty} onChange={(e) => update(i, { qty: Number(e.target.value) })} />
-                      <input className="input num" type="number" step="0.01" min={0} placeholder="0.00" value={r.unitValue} onChange={(e) => update(i, { unitValue: e.target.value })} />
+                    <div
+                      key={i}
+                      className="grid gap-2 md:grid-cols-[1fr_130px_88px_70px_100px_36px] md:items-center
+                                 grid-cols-2 rounded-lg border border-edge md:border-0 p-3 md:p-0 bg-panel-2 md:bg-transparent"
+                    >
+                      <label className="col-span-2 md:col-span-1">
+                        <span className="md:hidden block text-[10px] uppercase tracking-[0.14em] text-fog mb-1">Card</span>
+                        <input className="input" placeholder="Card name" value={r.name} onChange={(e) => update(i, { name: e.target.value })} />
+                      </label>
+                      <label className="col-span-2 md:col-span-1">
+                        <span className="md:hidden block text-[10px] uppercase tracking-[0.14em] text-fog mb-1">Game</span>
+                        <select className="input" value={r.game} onChange={(e) => update(i, { game: e.target.value })}>
+                          {GAMES.map((g) => <option key={g}>{g}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        <span className="md:hidden block text-[10px] uppercase tracking-[0.14em] text-fog mb-1">Cond.</span>
+                        <select className="input" value={r.condition} onChange={(e) => update(i, { condition: e.target.value })}>
+                          {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        <span className="md:hidden block text-[10px] uppercase tracking-[0.14em] text-fog mb-1">Qty</span>
+                        <input className="input num" type="number" min={1} value={r.qty} onChange={(e) => update(i, { qty: Number(e.target.value) })} />
+                      </label>
+                      <label className="col-span-2 md:col-span-1">
+                        <span className="md:hidden block text-[10px] uppercase tracking-[0.14em] text-fog mb-1">Value ($)</span>
+                        <input className="input num" type="number" step="0.01" min={0} placeholder="0.00" value={r.unitValue} onChange={(e) => update(i, { unitValue: e.target.value })} />
+                      </label>
                       <button
+                        type="button"
                         onClick={() => setRows((p) => (p.length > 1 ? p.filter((_, j) => j !== i) : p))}
-                        className="text-fog hover:text-ruby flex items-center justify-center" title="Remove"
+                        className="col-span-2 md:col-span-1 btn-ghost md:border-0 md:bg-transparent py-2 md:py-0 md:h-9 text-fog hover:text-ruby flex items-center justify-center gap-1.5"
+                        title="Remove row"
                       >
-                        <Icon name="x" className="w-4 h-4" />
+                        <Icon name="trash" className="w-4 h-4" />
+                        <span className="md:hidden text-[12px]">Remove card</span>
                       </button>
                     </div>
                   ))}
-                  <button onClick={() => setRows((p) => [...p, empty()])} className="btn-ghost px-3 py-1.5 text-[12px]">
-                    <Icon name="plus" className="w-3.5 h-3.5" /> Add row
+
+                  <button type="button" onClick={() => setRows((p) => [...p, empty()])} className="btn-ghost px-3 py-2 text-[12px]">
+                    <Icon name="plus" className="w-3.5 h-3.5" /> Add another card
                   </button>
                 </div>
 
@@ -131,9 +158,9 @@ export function TradeinClient({ customers }: { customers: { id: number; name: st
 
                 {error && <p className="text-ruby text-[12px] bg-ruby/10 border border-ruby/25 rounded-lg px-3 py-2 mb-3">{error}</p>}
 
-                <div className="flex items-center justify-between border-t border-edge pt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-edge pt-4">
                   <p className="text-sm text-fog">Payout total: <span className="num text-gold-soft text-lg font-semibold">{money(total)}</span></p>
-                  <button onClick={submit} disabled={pending || total <= 0} className="btn-gold px-6 py-2.5 text-sm disabled:opacity-50">
+                  <button onClick={submit} disabled={pending || total <= 0} className="btn-gold px-6 py-2.5 text-sm disabled:opacity-50 w-full sm:w-auto justify-center">
                     {pending ? "Saving…" : `Complete ${kind === "buylist" ? "buylist" : "trade-in"}`}
                   </button>
                 </div>
@@ -141,6 +168,7 @@ export function TradeinClient({ customers }: { customers: { id: number; name: st
             )}
           </div>
         </div>
+        </Portal>
       )}
     </>
   );
