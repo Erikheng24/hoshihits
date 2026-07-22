@@ -176,8 +176,68 @@ label.field > span {
 .stagger > *:nth-child(7) { animation-delay: 0.26s; }
 .stagger > *:nth-child(8) { animation-delay: 0.3s; }
 
+/* ---------------------------------------------------------------------------
+   Print / Save-as-PDF: show ONLY the receipt, on white paper, in black ink.
+   Sized for both A4 and 80mm thermal rolls.
+--------------------------------------------------------------------------- */
 @media print {
-  .no-print { display: none !important; }
-  body { background: #fff; color: #000; }
-  .print-receipt { display: block !important; }
+  @page {
+    margin: 8mm;
+  }
+
+  .no-print,
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .backdrop-stars {
+    display: none !important;
+  }
+
+  /* Collapse the app shell so the receipt starts at the top of the page */
+  body * {
+    visibility: hidden;
+  }
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible;
+  }
+  .print-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 80mm;
+    margin: 0 auto;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Force every colour in the receipt to readable black on white */
+  .print-receipt *,
+  .print-receipt .text-gold-grad,
+  .print-receipt .num {
+    color: #000 !important;
+    background: transparent !important;
+    -webkit-text-fill-color: #000 !important;
+    border-color: #999 !important;
+    text-shadow: none !important;
+  }
+
+  .print-receipt img {
+    filter: grayscale(100%) contrast(1.1);
+    max-width: 28mm;
+    height: auto;
+  }
 }

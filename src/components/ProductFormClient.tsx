@@ -132,7 +132,8 @@ export function ProductFormClient({
         <div className="flex flex-col gap-1.5 shrink-0">
           <label className="btn-ghost px-3 py-1.5 text-[12px] cursor-pointer whitespace-nowrap">
             <Icon name="export" className="w-3.5 h-3.5" /> {image ? "Change" : "Upload"}
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhoto} />
+            {/* No `capture` attribute — that would force the camera and hide the photo library. */}
+            <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
           </label>
           {image && (
             <button type="button" onClick={() => { setImage(null); setScanImage("__clear__"); }} className="btn-ghost px-3 py-1.5 text-[12px] text-ruby/80">

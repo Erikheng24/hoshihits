@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money, shortDateTime } from "@/lib/format";
-import { PrintButton } from "./PrintButton";
+import { PrintButton } from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
 

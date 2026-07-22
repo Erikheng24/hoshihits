@@ -97,7 +97,27 @@ export function UnifiedScanner({
       setPhase("working");
       setStatus(kind === "graded" ? "Looking up cert on PSA…" : kind === "sealed" ? "Looking up product…" : "Matching card in catalog…");
       try {
-        applyResult(await enrich(kind, code, game), fallbackImage);
+        const res = await enrich(kind, code, game);
+        applyResult(res, fallbackImage);
+
+        // PSA's free tier allows very few calls a day, so when the lookup comes back
+        // without a name, read the printed slab label instead — it carries the card
+        // name, set and grade anyway. Keeps graded scanning usable with no API quota.
+        if (!res.fields.name && fallbackImage) {
+          setStatus("PSA unavailable — reading the slab label…");
+          const ocr = await runOcr(fallbackImage);
+          if (ocr.name || ocr.grade || ocr.set_name) {
+            setFields((f) => ({
+              ...f,
+              name: f.name || ocr.name,
+              set_name: f.set_name || ocr.set_name,
+              grade: f.grade || ocr.grade,
+              rarity: f.rarity || ocr.rarity,
+              grade_company: f.grade_company || ocr.grade_company,
+            }));
+            setNote("Read from the slab label (PSA lookup unavailable) — please double-check.");
+          }
+        }
       } catch {
         setNote("Lookup failed — fill the details in by hand.");
         setImage(fallbackImage);
@@ -106,6 +126,7 @@ export function UnifiedScanner({
       setPhase("preview");
       busy.current = false;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [enrich, kind, game, stopCamera]
   );
 
@@ -340,7 +361,8 @@ export function UnifiedScanner({
               <button onClick={() => setPhase("type")} className="btn-ghost px-3 py-2.5 text-sm">← Back</button>
               <label className="btn-ghost px-4 py-2.5 text-sm cursor-pointer flex-1 justify-center">
                 <Icon name="export" className="w-4 h-4" /> Upload photo
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+                {/* No `capture` — lets the phone offer both the photo library and the camera. */}
+                <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
               </label>
               <button onClick={handleCapture} disabled={!!camError}
                       className={`${kind === "raw" ? "btn-gold" : "btn-ghost"} px-4 py-2.5 text-sm flex-1 justify-center disabled:opacity-40`}>
@@ -386,7 +408,7 @@ export function UnifiedScanner({
                   )}
                   <label className="btn-ghost w-full mt-2 px-2 py-1.5 text-[11px] cursor-pointer justify-center">
                     <Icon name="export" className="w-3 h-3" /> Photo
-                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCustomPhoto} />
+                    <input type="file" accept="image/*" className="hidden" onChange={handleCustomPhoto} />
                   </label>
                 </div>
                 <div className="flex-1 min-w-0 space-y-1.5">

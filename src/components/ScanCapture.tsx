@@ -287,7 +287,8 @@ export function ScanCapture({
             <div className="flex items-center gap-2 mt-3">
               <label className="btn-ghost px-4 py-2.5 text-sm cursor-pointer flex-1 justify-center">
                 <Icon name="export" className="w-4 h-4" /> Upload photo
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+                {/* No `capture` — lets the phone offer both the photo library and the camera. */}
+                <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
               </label>
               {!usesCode ? (
                 <button onClick={handleCapture} disabled={!!camError} className="btn-gold px-5 py-2.5 text-sm flex-1 justify-center disabled:opacity-40">
