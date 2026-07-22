@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "./icons";
 import { BrandMark } from "./BrandMark";
+import { Portal } from "./Portal";
 import type { NavItem } from "@/lib/nav";
 import type { Branding } from "@/lib/branding";
 
@@ -106,20 +107,24 @@ export function MobileNav({ items, brand }: { items: NavItem[]; brand: Branding 
         <Icon name="menu" className="w-5 h-5" />
       </button>
 
+      {/* Portalled to <body>: this button sits inside the glass header, whose
+          backdrop-filter would otherwise clip the fixed drawer to the header strip. */}
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/70 animate-fadein" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-[280px] bg-[#0d0d0d] border-r border-edge flex flex-col animate-rise">
-            <div className="flex items-center justify-between pr-4">
-              <Brand brand={brand} />
-              <button onClick={() => setOpen(false)} className="text-fog hover:text-white" aria-label="Close menu">
-                <Icon name="x" className="w-5 h-5" />
-              </button>
+        <Portal>
+          <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true">
+            <div className="absolute inset-0 bg-black/70 animate-fadein" onClick={() => setOpen(false)} />
+            <div className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-[#0d0d0d] border-r border-edge flex flex-col animate-rise">
+              <div className="flex items-center justify-between pr-4 shrink-0">
+                <Brand brand={brand} />
+                <button onClick={() => setOpen(false)} className="text-fog hover:text-white p-2" aria-label="Close menu">
+                  <Icon name="x" className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="gold-rule mx-6 mb-4 shrink-0" />
+              <NavLinks items={items} onNavigate={() => setOpen(false)} />
             </div>
-            <div className="gold-rule mx-6 mb-4" />
-            <NavLinks items={items} onNavigate={() => setOpen(false)} />
           </div>
-        </div>
+        </Portal>
       )}
     </>
   );
