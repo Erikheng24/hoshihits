@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money, shortDate } from "@/lib/format";
@@ -44,9 +45,12 @@ export default function PurchaseOrdersPage({ searchParams }: { searchParams: { q
         title="Purchase Orders"
         subtitle="Restock orders to distributors — draft, order, track, receive."
         actions={
-          <Link href="/purchase-orders?new=1" className="btn-gold px-4 py-2 text-sm">
-            <Icon name="plus" className="w-4 h-4" /> New PO
-          </Link>
+          <>
+            <ReportActions section="purchase-orders" />
+            <Link href="/purchase-orders?new=1" className="btn-gold px-4 py-2 text-sm">
+              <Icon name="plus" className="w-4 h-4" /> New PO
+            </Link>
+          </>
         }
       />
 

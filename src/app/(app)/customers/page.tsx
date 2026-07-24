@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money, shortDate } from "@/lib/format";
@@ -39,9 +40,12 @@ export default function CustomersPage({ searchParams }: { searchParams: { q?: st
         title="Customers"
         subtitle="Customer directory and purchase history."
         actions={
-          <Link href="/customers?new=1" className="btn-gold px-4 py-2 text-sm">
-            <Icon name="plus" className="w-4 h-4" /> Add customer
-          </Link>
+          <>
+            <ReportActions section="customers" />
+            <Link href="/customers?new=1" className="btn-gold px-4 py-2 text-sm">
+              <Icon name="plus" className="w-4 h-4" /> Add customer
+            </Link>
+          </>
         }
       />
 

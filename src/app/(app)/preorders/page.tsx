@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money, num, shortDate } from "@/lib/format";
@@ -55,9 +56,12 @@ export default function PreordersPage({ searchParams }: { searchParams: { q?: st
         title="Preorders"
         subtitle="Deposits, allocations, and pickup flow."
         actions={
-          <Link href="/preorders?new=1" className="btn-gold px-4 py-2 text-sm">
-            <Icon name="plus" className="w-4 h-4" /> New preorder
-          </Link>
+          <>
+            <ReportActions section="preorders" />
+            <Link href="/preorders?new=1" className="btn-gold px-4 py-2 text-sm">
+              <Icon name="plus" className="w-4 h-4" /> New preorder
+            </Link>
+          </>
         }
       />
 

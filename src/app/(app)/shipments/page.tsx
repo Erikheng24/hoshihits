@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { num, shortDate } from "@/lib/format";
@@ -35,6 +36,7 @@ export default function ShipmentsPage() {
       <PageHeader
         title="Shipments"
         subtitle="International inbound freight — track from origin to shelf."
+        actions={<ReportActions section="shipments" />}
       />
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5 stagger">

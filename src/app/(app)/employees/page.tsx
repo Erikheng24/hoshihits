@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { shortDate, shortDateTime } from "@/lib/format";
@@ -34,9 +35,12 @@ export default function EmployeesPage({ searchParams }: { searchParams: { new?: 
         title="Employees"
         subtitle="Staff accounts, roles, and access control."
         actions={
-          <Link href="/employees?new=1" className="btn-gold px-4 py-2 text-sm">
-            <Icon name="plus" className="w-4 h-4" /> Add employee
-          </Link>
+          <>
+            <ReportActions section="employees" />
+            <Link href="/employees?new=1" className="btn-gold px-4 py-2 text-sm">
+              <Icon name="plus" className="w-4 h-4" /> Add employee
+            </Link>
+          </>
         }
       />
 

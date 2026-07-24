@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getDb, getAiUsage } from "@/lib/db";
 import { money, num } from "@/lib/format";
 import { PageHeader, Badge, EmptyState } from "@/components/ui";
+import { ReportActions } from "@/components/ReportActions";
 import { Icon } from "@/components/icons";
 import { SearchToolbar } from "@/components/SearchToolbar";
 import { ProductFormClient } from "@/components/ProductFormClient";
@@ -110,6 +111,7 @@ export function InventoryView({
         subtitle={subtitle}
         actions={
           <>
+            <ReportActions section={mode === "single" ? "singles" : mode === "graded" ? "graded" : "inventory"} />
             <ScanToAddButton enrich={enrichScan} quickAdd={quickAddProductAction} identify={identifyPhotoAction} games={GAMES} initialUsage={aiUsage} />
             <Link href={withParam("new", "1")} className="btn-ghost px-4 py-2 text-sm">
               <Icon name="plus" className="w-4 h-4" /> Add manually

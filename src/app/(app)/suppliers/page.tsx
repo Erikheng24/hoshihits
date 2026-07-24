@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money } from "@/lib/format";
@@ -35,9 +36,12 @@ export default function SuppliersPage({ searchParams }: { searchParams: { q?: st
         title="Suppliers"
         subtitle="Distributors and wholesale partners."
         actions={
-          <Link href="/suppliers?new=1" className="btn-gold px-4 py-2 text-sm">
-            <Icon name="plus" className="w-4 h-4" /> Add supplier
-          </Link>
+          <>
+            <ReportActions section="suppliers" />
+            <Link href="/suppliers?new=1" className="btn-gold px-4 py-2 text-sm">
+              <Icon name="plus" className="w-4 h-4" /> Add supplier
+            </Link>
+          </>
         }
       />
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money, num, shortDate } from "@/lib/format";
@@ -29,9 +30,12 @@ export default function TournamentsPage({ searchParams }: { searchParams: { new?
         title="Tournaments"
         subtitle="Weekly events, registration, and entry fees."
         actions={
-          <Link href="/tournaments?new=1" className="btn-gold px-4 py-2 text-sm">
-            <Icon name="plus" className="w-4 h-4" /> Schedule event
-          </Link>
+          <>
+            <ReportActions section="tournaments" />
+            <Link href="/tournaments?new=1" className="btn-gold px-4 py-2 text-sm">
+              <Icon name="plus" className="w-4 h-4" /> Schedule event
+            </Link>
+          </>
         }
       />
 

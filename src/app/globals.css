@@ -242,4 +242,36 @@ label.field > span {
     max-width: 28mm;
     height: auto;
   }
+
+  /* ---- Full-page report sheets (A4/Letter), not thermal rolls ------------ */
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+  .print-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    /* @page margin is tuned for receipts, so give the sheet its own breathing room */
+    padding: 6mm 5mm !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+  /* Repeat the table head on every page and never split a row across pages */
+  .print-sheet thead {
+    display: table-header-group;
+  }
+  .print-sheet tfoot {
+    display: table-footer-group;
+  }
+  .print-sheet tr,
+  .print-sheet img {
+    break-inside: avoid;
+  }
+  .print-sheet th {
+    /* keep the dark header band when printing */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

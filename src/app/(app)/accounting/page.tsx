@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { money, shortDate } from "@/lib/format";
@@ -56,9 +57,12 @@ export default function AccountingPage({ searchParams }: { searchParams: { new?:
         title="Accounting"
         subtitle="Profit & loss, operating expenses, and financial records."
         actions={
-          <Link href="/accounting?new=1" className="btn-gold px-4 py-2 text-sm">
-            <Icon name="plus" className="w-4 h-4" /> Add expense
-          </Link>
+          <>
+            <ReportActions section="expenses" />
+            <Link href="/accounting?new=1" className="btn-gold px-4 py-2 text-sm">
+              <Icon name="plus" className="w-4 h-4" /> Add expense
+            </Link>
+          </>
         }
       />
 

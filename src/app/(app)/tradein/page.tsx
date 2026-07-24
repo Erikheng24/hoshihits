@@ -1,4 +1,5 @@
 import { requireModule } from "@/lib/auth";
+import { ReportActions } from "@/components/ReportActions";
 import { getDb } from "@/lib/db";
 import { money, num, shortDateTime } from "@/lib/format";
 import { PageHeader, Badge, StatCard, EmptyState } from "@/components/ui";
@@ -35,7 +36,12 @@ export default function TradeinPage() {
       <PageHeader
         title="Trade-In / Buylist"
         subtitle="Buy collections and single cards from customers for cash."
-        actions={<TradeinClient customers={customers} />}
+        actions={
+          <>
+            <ReportActions section="tradein" />
+            <TradeinClient customers={customers} />
+          </>
+        }
       />
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5 stagger">

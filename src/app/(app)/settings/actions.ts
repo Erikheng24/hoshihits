@@ -35,3 +35,43 @@ export async function saveSettingsAction(formData: FormData) {
   revalidatePath("/", "layout"); // branding shows in the shell, so refresh everything
   redirect("/settings");
 }
+
+/**
+ * Operational tables wiped by a factory reset, children before parents so
+ * foreign keys stay satisfied. `users`, `settings` and `ai_usage` are NOT here:
+ * staff logins, shop configuration and the AI quota counter all survive.
+ */
+const RESET_TABLES = [
+  "sale_items", "shipments", "po_items", "tradein_items",
+  "preorders", "sales", "tradeins", "purchase_orders",
+  "expenses", "tournaments", "products", "customers", "suppliers",
+  "audit_log",
+];
+
+/**
+ * Owner-only factory reset: erase all trading data for a fresh start.
+ * Requires typing ERASE to guard against a mis-click.
+ */
+export async function resetDataAction(formData: FormData) {
+  const user = requireModule("settings"); // settings is OWNER-only
+  if (user.role !== "OWNER") redirect("/dashboard");
+  if (String(formData.get("confirm") ?? "").trim().toUpperCase() !== "ERASE") {
+    redirect("/settings?reset=badconfirm");
+  }
+
+  const db = getDb();
+  db.transaction(() => {
+    for (const table of RESET_TABLES) db.prepare(`DELETE FROM ${table}`).run();
+    // Restart id numbering so the fresh store begins at 1 again.
+    try {
+      db.prepare(
+        `DELETE FROM sqlite_sequence WHERE name IN (${RESET_TABLES.map(() => "?").join(",")})`
+      ).run(...RESET_TABLES);
+    } catch { /* sqlite_sequence only exists once an AUTOINCREMENT table has rows */ }
+  })();
+
+  // Written after the wipe so the reset itself is on record.
+  audit(user.id, "settings.reset_data", "settings", undefined, `Erased: ${RESET_TABLES.join(", ")}`);
+  revalidatePath("/", "layout");
+  redirect("/settings?reset=done");
+}

@@ -5,7 +5,7 @@ import { PageHeader, Card, Badge } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { LogoUpload } from "@/components/LogoUpload";
 import { getReceiptConfig } from "@/lib/receipt-config";
-import { saveSettingsAction } from "./actions";
+import { saveSettingsAction, resetDataAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +129,39 @@ export default function SettingsPage() {
           </div>
         </Card>
       </div>
+
+      {/* ---- Danger zone: owner-only factory reset ---- */}
+      <Card title="Danger Zone" className="p-5 mt-4 border-ruby/30">
+        <p className="text-[13px] text-mist mb-1">
+          Erase all trading data and start the shop fresh.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3 my-3">
+          <div className="rounded-lg border border-ruby/25 bg-ruby/[0.06] px-4 py-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-ruby mb-1.5">Will be erased</p>
+            <p className="text-[12px] text-mist leading-relaxed">
+              Products · Sales &amp; receipts · Customers · Preorders · Trade-ins ·
+              Suppliers · Purchase orders · Shipments · Expenses · Tournaments · Activity log
+            </p>
+          </div>
+          <div className="rounded-lg border border-jade/25 bg-jade/[0.06] px-4 py-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-jade mb-1.5">Will be kept</p>
+            <p className="text-[12px] text-mist leading-relaxed">
+              Your staff logins &amp; passwords · Shop settings (name, logo, receipt layout,
+              AI limit) · Today&apos;s AI scan count
+            </p>
+          </div>
+        </div>
+        <form action={resetDataAction} className="flex flex-wrap items-end gap-2">
+          <label className="field flex-1 min-w-[220px]">
+            <span>Type ERASE to confirm</span>
+            <input name="confirm" className="input" placeholder="ERASE" autoComplete="off" required />
+          </label>
+          <button className="btn-ghost px-5 py-2.5 text-sm !border-ruby/40 !text-ruby hover:!bg-ruby/10">
+            <Icon name="trash" className="w-4 h-4" /> Erase all data
+          </button>
+        </form>
+        <p className="text-[11px] text-fog mt-2">This cannot be undone. Export any reports you want to keep first.</p>
+      </Card>
     </>
   );
 }
