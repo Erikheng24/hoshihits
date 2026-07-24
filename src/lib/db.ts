@@ -287,8 +287,42 @@ export function getDb(): DbConn {
     const hasUsers = db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number };
     if (hasUsers.c === 0) seed(db, hashPassword, ts);
   }
+  normalizeColumnCase(db);
   global.__hoshiDb = db;
   return db;
+}
+
+/**
+ * libsql returns SQL reserved-word columns UPPERCASED (`action` -> `ACTION`,
+ * `key` -> `KEY`), unlike better-sqlite3 which preserves the declared case. That
+ * silently turns `row.action` into undefined. Every alias in this codebase is
+ * lower-case, so lower-casing result keys once here makes all queries behave
+ * exactly as they did before — instead of patching each call site.
+ */
+function normalizeColumnCase(db: DbConn) {
+  const lower = <T,>(row: T): T => {
+    if (!row || typeof row !== "object") return row;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
+      const key = k.toLowerCase();
+      // Never let a normalised key clobber one the driver already gave us.
+      if (key === k || !(key in (row as Record<string, unknown>))) out[key] = v;
+    }
+    return out as T;
+  };
+
+  const prepare = db.prepare.bind(db);
+  (db as unknown as { prepare: (sql: string) => unknown }).prepare = (sql: string) => {
+    const stmt = prepare(sql) as {
+      get: (...a: unknown[]) => unknown;
+      all: (...a: unknown[]) => unknown[];
+    };
+    const get = stmt.get.bind(stmt);
+    const all = stmt.all.bind(stmt);
+    stmt.get = (...a: unknown[]) => lower(get(...a));
+    stmt.all = (...a: unknown[]) => all(...a).map(lower);
+    return stmt;
+  };
 }
 
 /** Copy every row from the legacy local SQLite file into Turso (once). */
