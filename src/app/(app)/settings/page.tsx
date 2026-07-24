@@ -14,8 +14,7 @@ export default function SettingsPage() {
   const db = getDb();
   const rc = getReceiptConfig();
   const integrations = [
-    { key: "PSA", label: "PSA graded lookups", live: !!process.env.PSA_API_TOKEN, hint: "psacard.com/publicapi" },
-    { key: "UPC", label: "Box barcode lookups", live: !!process.env.UPC_API_KEY, hint: "upcitemdb.com" },
+    { key: "AI", label: "Photo scanning — cards, slabs & boxes", live: !!process.env.GEMINI_API_KEY, hint: "Google Gemini · aistudio.google.com" },
   ];
   const settings = Object.fromEntries(
     (db.prepare("SELECT key, value FROM settings").all() as { key: string; value: string }[]).map((s) => [s.key, s.value])
@@ -33,7 +32,7 @@ export default function SettingsPage() {
 
       <Card title="Scan Integrations" className="p-5 mb-4">
         <p className="text-[12px] text-fog mb-4">
-          Graded and box scans auto-fill from these services when a key is set in <span className="num text-mist">.env.local</span> (restart after editing). Until then they use built-in demo data.
+          One AI reads every photo — raw cards, graded slabs (name, grade &amp; cert) and sealed boxes — and the photo you take is the product picture. Needs <span className="num text-mist">GEMINI_API_KEY</span> in <span className="num text-mist">.env.local</span> (restart after editing).
         </p>
         <div className="grid sm:grid-cols-2 gap-3">
           {integrations.map((i) => (
@@ -68,19 +67,17 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="field"><span>Logo size ({rc.logoSize}px)</span>
-                  <input name="receipt_logo_size" type="range" min={0} max={120} step={4}
+                  <input name="receipt_logo_size" type="range" min={0} max={160} step={4}
                          defaultValue={rc.logoSize} className="w-full accent-[#D4AF37]" />
                 </label>
-                <label className="field"><span>Text size</span>
-                  <select name="receipt_font_scale" className="input" defaultValue={String(rc.fontScale)}>
-                    <option value="0.9">Small</option>
-                    <option value="1">Normal</option>
-                    <option value="1.15">Large</option>
-                    <option value="1.3">Extra large</option>
-                  </select>
+                <label className="field"><span>Text size (×{rc.fontScale})</span>
+                  <input name="receipt_font_scale" type="range" min={0.8} max={2.4} step={0.1}
+                         defaultValue={rc.fontScale} className="w-full accent-[#D4AF37]" />
                 </label>
               </div>
-              <p className="text-[11px] text-fog -mt-1 mb-3">Set logo size to 0 to hide it.</p>
+              <p className="text-[11px] text-fog -mt-1 mb-3">
+                Set logo size to 0 to hide it. Drag Text size up for bigger, bolder print on a 57&nbsp;mm receipt, then Save and reprint to see it.
+              </p>
 
               <label className="field"><span>Extra header line (optional)</span>
                 <input name="receipt_header_note" className="input" defaultValue={rc.headerNote}
@@ -101,6 +98,12 @@ export default function SettingsPage() {
                 ))}
               </div>
             </div>
+
+            <label className="field pt-2"><span>Daily AI scan limit</span>
+              <input name="ai_daily_limit" type="number" min={1} className="input num"
+                     defaultValue={settings.ai_daily_limit ?? ""} placeholder="200" />
+              <span className="text-[11px] text-fog mt-1">Shown as “scans left today” in the scanner. Match it to your Gemini plan’s daily limit.</span>
+            </label>
 
             <div className="flex justify-end">
               <button className="btn-gold px-5 py-2 text-sm">Save settings</button>

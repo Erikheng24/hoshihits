@@ -9,6 +9,8 @@ const KEYS = [
   "store_name", "store_tagline", "store_address", "store_phone", "receipt_footer",
   // Receipt layout
   "receipt_logo_size", "receipt_font_scale", "receipt_header_note",
+  // AI scanning
+  "ai_daily_limit",
 ];
 // Checkboxes: absent from the form data means "off", so they need explicit handling.
 const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_phone", "receipt_show_staff"];

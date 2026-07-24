@@ -1,11 +1,12 @@
 "use server";
 
 import { requireModule } from "@/lib/auth";
-import { getDb, audit, ts } from "@/lib/db";
+import { getDb, audit, ts, getAiUsage, type AiUsage } from "@/lib/db";
 import type { EnrichResult, ItemKind } from "@/lib/scan";
 import { lookupPsaCert } from "@/lib/providers/psa";
 import { lookupUpc } from "@/lib/providers/upc";
 import { lookupCard } from "@/lib/providers/catalog";
+import { identifyPhoto } from "@/lib/providers/vision";
 
 /**
  * Turn a scanned code (or a card name) into product data.
@@ -21,6 +22,45 @@ export async function enrichScan(kind: ItemKind, code: string, game?: string): P
   if (kind === "graded") return lookupPsaCert(input);
   if (kind === "sealed") return lookupUpc(input);
   return lookupCard(input, game);
+}
+
+/** Photo identification result, plus the game/kind the AI inferred from the image. */
+export interface PhotoIdResult extends EnrichResult {
+  identified: boolean;
+  game?: string;
+  kind?: ItemKind;
+  usage?: AiUsage; // today's AI scan count + daily limit
+}
+
+/**
+ * Identify a card, slab or box from a photo with vision AI.
+ * Reads the item exactly as printed (Japanese product stays Japanese) and returns
+ * the data the AI reads. The picture is always the photo the shopkeeper took — we
+ * do NOT substitute English stock art, so the record matches the real item.
+ */
+export async function identifyPhotoAction(dataUrl: string, gameHint?: string): Promise<PhotoIdResult> {
+  requireModule("lookup");
+
+  const vid = await identifyPhoto(dataUrl, gameHint);
+  const usage = getAiUsage();
+  if (!vid.identified || !vid.fields.name) {
+    return { ok: vid.ok, identified: false, source: "none", message: vid.message, fields: {}, usage };
+  }
+
+  const noun = vid.kind === "graded" ? "slab" : vid.kind === "sealed" ? "box" : "card";
+  const lang = vid.language ? vid.language : "";
+  return {
+    ok: true,
+    identified: true,
+    game: vid.game || gameHint,
+    kind: vid.kind,
+    source: "none",
+    // name, set_name, rarity, and (for slabs) grade_company / grade / cert_number.
+    fields: vid.fields,
+    // No stock art — the scanned photo is the product picture (used by the caller).
+    message: `Read from the ${lang ? lang + " " : ""}${noun} — please confirm the details before saving.`,
+    usage,
+  };
 }
 
 export interface QuickAddInput {

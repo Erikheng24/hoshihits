@@ -1,6 +1,7 @@
 import { requireModule } from "@/lib/auth";
+import { getAiUsage } from "@/lib/db";
 import { PageHeader } from "@/components/ui";
-import { enrichScan } from "@/app/(app)/inventory/enrich";
+import { enrichScan, identifyPhotoAction } from "@/app/(app)/inventory/enrich";
 import { LookupClient } from "./LookupClient";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,9 @@ export default function LookupPage() {
     <>
       <PageHeader
         title="Card Lookup"
-        subtitle="Photograph a card or box to find its name, set and market price — without adding it to stock."
+        subtitle="Photograph a card, slab or box to read its details — without adding it to stock."
       />
-      <LookupClient enrich={enrichScan} />
+      <LookupClient enrich={enrichScan} identify={identifyPhotoAction} initialUsage={getAiUsage()} />
     </>
   );
 }

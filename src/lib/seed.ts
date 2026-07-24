@@ -1,6 +1,6 @@
-import type BetterSqlite3 from "better-sqlite3";
+import type LibsqlDatabase from "libsql";
 
-type Database = BetterSqlite3.Database;
+type Database = InstanceType<typeof LibsqlDatabase>;
 
 type Hash = (p: string) => string;
 type Ts = (d?: Date) => string;

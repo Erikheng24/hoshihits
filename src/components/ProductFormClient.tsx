@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Icon } from "./icons";
 import { ScanCapture } from "./ScanCapture";
 import { fileToDataUrl } from "@/lib/image-client";
-import type { ScanFields, ScanMode, EnrichResult } from "@/lib/scan";
+import type { ScanFields, ScanMode } from "@/lib/scan";
+import type { PhotoIdResult } from "@/app/(app)/inventory/enrich";
 
 const GAMES = [
   "Pokémon", "One Piece", "Yu-Gi-Oh!", "Weiss Schwarz", "Union Arena",
@@ -26,13 +27,15 @@ export function ProductFormClient({
   basePath,
   editingId,
   action,
-  enrich,
+  identify,
+  initialUsage,
 }: {
   product: ProductLike;
   basePath: string;
   editingId?: number;
   action: (formData: FormData) => void | Promise<void>;
-  enrich: (kind: "graded" | "sealed", code: string) => Promise<EnrichResult>;
+  identify: (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
+  initialUsage?: { used: number; limit: number };
 }) {
   const [scanOpen, setScanOpen] = useState(false);
   const [image, setImage] = useState<string | null>(product.image ?? null);
@@ -207,7 +210,7 @@ export function ProductFormClient({
         </div>
       </form>
 
-      {scanOpen && <ScanCapture mode={scanMode} enrich={enrich} onApply={applyScan} onClose={() => setScanOpen(false)} />}
+      {scanOpen && <ScanCapture mode={scanMode} identify={identify} initialUsage={initialUsage} onApply={applyScan} onClose={() => setScanOpen(false)} />}
     </>
   );
 }

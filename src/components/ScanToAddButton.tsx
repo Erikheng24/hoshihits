@@ -4,16 +4,20 @@ import { useState } from "react";
 import { Icon } from "./icons";
 import { UnifiedScanner } from "./UnifiedScanner";
 import type { ItemKind, EnrichResult } from "@/lib/scan";
-import type { QuickAddInput } from "@/app/(app)/inventory/enrich";
+import type { QuickAddInput, PhotoIdResult } from "@/app/(app)/inventory/enrich";
 
 export function ScanToAddButton({
   enrich,
   quickAdd,
+  identify,
   games,
+  initialUsage,
 }: {
   enrich: (kind: ItemKind, code: string, game?: string) => Promise<EnrichResult>;
   quickAdd: (input: QuickAddInput) => Promise<{ ok: boolean; error?: string; id?: number; sku?: string }>;
+  identify: (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
   games: string[];
+  initialUsage?: { used: number; limit: number };
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -22,7 +26,7 @@ export function ScanToAddButton({
         <Icon name="scan" className="w-4 h-4" /> Scan to add
       </button>
       {open && (
-        <UnifiedScanner enrich={enrich} quickAdd={quickAdd} games={games} onClose={() => setOpen(false)} />
+        <UnifiedScanner enrich={enrich} quickAdd={quickAdd} identify={identify} games={games} initialUsage={initialUsage} onClose={() => setOpen(false)} />
       )}
     </>
   );

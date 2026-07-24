@@ -36,8 +36,8 @@ export function getReceiptConfig(): ReceiptConfig {
   const m = Object.fromEntries(rows.map((r) => [r.key, r.value])) as Record<string, string | undefined>;
 
   return {
-    logoSize: Math.max(0, Math.min(120, numOr(m.receipt_logo_size, 56))),
-    fontScale: Math.max(0.8, Math.min(1.6, numOr(m.receipt_font_scale, 1))),
+    logoSize: Math.max(0, Math.min(160, numOr(m.receipt_logo_size, 56))),
+    fontScale: Math.max(0.8, Math.min(2.4, numOr(m.receipt_font_scale, 1))),
     showTagline: bool(m.receipt_show_tagline, true),
     showAddress: bool(m.receipt_show_address, true),
     showPhone: bool(m.receipt_show_phone, true),

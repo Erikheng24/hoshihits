@@ -1,12 +1,15 @@
-import Database from "better-sqlite3";
+import Database from "libsql";
 import path from "path";
 import fs from "fs";
 import { hashPassword } from "./hash";
 import { seed } from "./seed";
 
+/** The libsql connection type (API-compatible with better-sqlite3). */
+export type DbConn = InstanceType<typeof Database>;
+
 declare global {
   // eslint-disable-next-line no-var
-  var __hoshiDb: Database.Database | undefined;
+  var __hoshiDb: DbConn | undefined;
 }
 
 const SCHEMA = `
@@ -208,6 +211,11 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS ai_usage (
+  day TEXT PRIMARY KEY,   -- YYYY-MM-DD (local)
+  count INTEGER NOT NULL DEFAULT 0
+);
 `;
 
 /** Local-time timestamp "YYYY-MM-DD HH:MM:SS" so SQLite date() works naturally. */
@@ -221,7 +229,7 @@ export function today(): string {
 }
 
 /** Idempotent schema migrations for databases seeded by earlier versions. */
-function migrate(db: Database.Database) {
+function migrate(db: DbConn) {
   const cols = (table: string) =>
     (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name);
   // Loyalty system removed: drop tier / points / store_credit if present.
@@ -237,16 +245,42 @@ function migrate(db: Database.Database) {
   if (!productCols.includes("market_price")) db.exec(`ALTER TABLE products ADD COLUMN market_price INTEGER`);
 }
 
-export function getDb(): Database.Database {
+export function getDb(): DbConn {
   if (global.__hoshiDb) return global.__hoshiDb;
-  // DATA_DIR lets the host mount a persistent volume (Railway etc.); falls back to ./data locally.
   const dir = process.env.DATA_DIR || path.join(process.cwd(), "data");
   fs.mkdirSync(dir, { recursive: true });
-  const db = new Database(path.join(dir, "hoshihits.db"));
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  let db: DbConn;
+  if (url) {
+    // Production (free host): Turso embedded replica. Reads are local & fast; writes
+    // forward to the cloud primary (durable), and read-your-writes keeps this copy
+    // current — so the app behaves exactly like a local SQLite file, but the data
+    // lives safely in Turso and survives the host wiping its disk.
+    // (authToken/readYourWrites are supported at runtime but missing from the .d.ts.)
+    const opts = { syncUrl: url, authToken, readYourWrites: true };
+    db = new Database(path.join(dir, "replica.db"), opts);
+    try { db.sync(); } catch { /* first boot / transient — schema below still creates it */ }
+  } else {
+    // Local dev: a plain on-disk SQLite file.
+    db = new Database(path.join(dir, "hoshihits.db"));
+    try { db.pragma("journal_mode = WAL"); } catch { /* backend-dependent */ }
+  }
+  try { db.pragma("foreign_keys = ON"); } catch { /* Turso enforces separately */ }
+
   db.exec(SCHEMA);
   migrate(db);
+
+  // One-time migration: copy a legacy on-disk SQLite database into Turso. Runs
+  // only when MIGRATE_LOCAL_TO_TURSO=1, Turso is the backend, and Turso is still
+  // empty — so it's a safe no-op everywhere except the single boot where we cut
+  // over. Both databases are reachable from inside the old host's container.
+  if (url && process.env.MIGRATE_LOCAL_TO_TURSO === "1") {
+    try { migrateLocalToTurso(db, dir); } catch (e) { console.error("[migrate→turso]", e); }
+  }
+
   // Demo data is opt-in only. In production an empty database triggers the
   // first-run owner setup instead of inventing accounts.
   if (process.env.SEED_DEMO === "1") {
@@ -255,6 +289,41 @@ export function getDb(): Database.Database {
   }
   global.__hoshiDb = db;
   return db;
+}
+
+/** Copy every row from the legacy local SQLite file into Turso (once). */
+function migrateLocalToTurso(turso: DbConn, dir: string) {
+  const legacyPath = path.join(dir, "hoshihits.db");
+  if (!fs.existsSync(legacyPath)) { console.log("[migrate→turso] no legacy DB, skipping"); return; }
+  const tursoUsers = (turso.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
+  if (tursoUsers > 0) { console.log("[migrate→turso] Turso already has data, skipping"); return; }
+
+  const local = new Database(legacyPath);
+  const localUsers = (local.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
+  if (localUsers === 0) { console.log("[migrate→turso] legacy DB empty, skipping"); local.close(); return; }
+
+  // Dependency order so foreign keys resolve.
+  const TABLES = [
+    "users", "customers", "suppliers", "products", "settings", "ai_usage",
+    "sales", "sale_items", "preorders", "purchase_orders", "po_items", "shipments",
+    "tradeins", "tradein_items", "expenses", "tournaments", "audit_log",
+  ];
+  for (const table of TABLES) {
+    let rows: Record<string, unknown>[] = [];
+    try { rows = local.prepare(`SELECT * FROM ${table}`).all() as Record<string, unknown>[]; }
+    catch { continue; } // table may not exist in an older legacy DB
+    if (!rows.length) continue;
+    const cols = Object.keys(rows[0]).filter((c) => c !== "_metadata");
+    const ins = turso.prepare(
+      `INSERT OR IGNORE INTO ${table} (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})`
+    );
+    let n = 0;
+    for (const row of rows) { ins.run(...cols.map((c) => row[c] as never)); n++; }
+    console.log(`[migrate→turso] ${table}: copied ${n} rows`);
+  }
+  local.close();
+  try { turso.sync(); } catch { /* best effort push */ }
+  console.log("[migrate→turso] DONE");
 }
 
 /** True when no account exists yet — the app is awaiting first-run setup. */
@@ -266,6 +335,24 @@ export function audit(userId: number | null, action: string, entity?: string, en
   getDb()
     .prepare("INSERT INTO audit_log (user_id, action, entity, entity_id, details, created_at) VALUES (?,?,?,?,?,?)")
     .run(userId, action, entity ?? null, entityId ?? null, details ?? null, ts());
+}
+
+export interface AiUsage { used: number; limit: number }
+
+/** Count one AI photo scan against today's quota. */
+export function recordAiScan(): void {
+  getDb()
+    .prepare("INSERT INTO ai_usage (day, count) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET count = count + 1")
+    .run(today());
+}
+
+/** Today's AI scan count and the configured daily limit (resets each day). */
+export function getAiUsage(): AiUsage {
+  const db = getDb();
+  const row = db.prepare("SELECT count FROM ai_usage WHERE day = ?").get(today()) as { count: number } | undefined;
+  const setting = db.prepare("SELECT value FROM settings WHERE key = 'ai_daily_limit'").get() as { value: string } | undefined;
+  const limit = Math.max(1, Number(setting?.value) || Number(process.env.GEMINI_DAILY_LIMIT) || 200);
+  return { used: row?.count ?? 0, limit };
 }
 
 let counterStmtReady = false;

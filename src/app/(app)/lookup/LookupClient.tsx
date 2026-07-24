@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Icon } from "@/components/icons";
 import { money } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image-client";
-import { parseScan, type ItemKind, type EnrichResult } from "@/lib/scan";
+import type { ItemKind, EnrichResult } from "@/lib/scan";
+import type { PhotoIdResult } from "@/app/(app)/inventory/enrich";
 
 const GAMES = [
   "Pokémon", "One Piece", "Yu-Gi-Oh!", "Weiss Schwarz", "Union Arena",
@@ -13,21 +14,25 @@ const GAMES = [
 
 /**
  * Identify a card or box from a photo.
- * Reads the printed text with on-device OCR, then looks the name up in the TCG
- * catalog for the official set, number and market price.
+ * A vision AI recognises the item — in any language, including Japanese boxes and
+ * angled slabs — then the TCG catalog fills in official art and market price.
  */
 export function LookupClient({
   enrich,
+  identify,
+  initialUsage,
 }: {
   enrich: (kind: ItemKind, code: string, game?: string) => Promise<EnrichResult>;
+  identify: (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
+  initialUsage?: { used: number; limit: number };
 }) {
   const [game, setGame] = useState("Pokémon");
   const [image, setImage] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<null | "reading" | "searching">(null);
-  const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<EnrichResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [usage, setUsage] = useState(initialUsage ?? null);
 
   async function search(name: string) {
     if (!name.trim()) return;
@@ -47,29 +52,23 @@ export function LookupClient({
     if (!file) return;
     setErr(null);
     setResult(null);
-    setProgress(0);
     try {
-      const url = await fileToDataUrl(file, 900, 0.9);
+      const url = await fileToDataUrl(file, 1024, 0.9);
       setImage(url);
       setBusy("reading");
-      const Tesseract = (await import("tesseract.js")).default;
-      const { data } = await Tesseract.recognize(url, "eng", {
-        logger: (m: { status: string; progress: number }) => {
-          if (m.status === "recognizing text") setProgress(Math.round(m.progress * 100));
-        },
-      });
-      const parsed = parseScan(data.text ?? "", "single");
-      if (parsed.name) {
-        setQuery(parsed.name);
-        await search(parsed.name);
+      const r = await identify(url, game);
+      if (r.usage) setUsage(r.usage);
+      if (r.game && GAMES.includes(r.game)) setGame(r.game);
+      if (r.identified && r.fields.name) {
+        setQuery(r.fields.name);
+        setResult(r);
       } else {
-        setBusy(null);
-        setErr("Couldn't read a name from that photo. Type it below, or try a sharper, straight-on shot.");
+        setErr(r.message ?? "Couldn't identify that photo. Type the name below instead.");
       }
     } catch {
-      setBusy(null);
       setErr("Couldn't read that image.");
     } finally {
+      setBusy(null);
       e.target.value = "";
     }
   }
@@ -81,8 +80,19 @@ export function LookupClient({
       {/* ---- input ---- */}
       <div className="card p-5">
         <p className="text-[13px] text-mist mb-3">
-          Take or upload a photo of the card or box. It reads the printed name, then finds the official set and market price.
+          Take or upload a photo of the card, slab or box. The AI reads it — Japanese product included — and the photo is the picture.
         </p>
+        {usage && (
+          <p className="text-[11px] mb-3">
+            <span className="text-fog">AI scans today </span>
+            <span className={`num ${usage.used >= usage.limit ? "text-ruby" : usage.used >= usage.limit * 0.85 ? "text-amberish" : "text-mist"}`}>
+              {usage.used} / {usage.limit}
+            </span>
+            {usage.used >= usage.limit
+              ? <span className="text-ruby"> — daily limit reached, resets tomorrow</span>
+              : <span className="text-fog"> ({usage.limit - usage.used} left today)</span>}
+          </p>
+        )}
 
         <div className="flex gap-2 mb-3">
           <select className="input !w-auto" value={game} onChange={(e) => setGame(e.target.value)}>
@@ -116,13 +126,8 @@ export function LookupClient({
           <div className="mt-4 text-center">
             <span className="inline-flex items-center gap-2 text-mist text-sm">
               <span className="w-4 h-4 rounded-full border-2 border-gold/40 border-t-gold animate-spin" />
-              {busy === "reading" ? "Reading the photo…" : "Searching the catalog…"}
+              {busy === "reading" ? "Identifying the photo…" : "Searching the catalog…"}
             </span>
-            {progress > 0 && busy === "reading" && (
-              <div className="h-1.5 rounded-full bg-edge overflow-hidden mt-3 max-w-xs mx-auto">
-                <div className="h-full bg-gold/70 transition-all" style={{ width: `${progress}%` }} />
-              </div>
-            )}
           </div>
         )}
 
@@ -142,9 +147,9 @@ export function LookupClient({
         ) : (
           <>
             <div className="flex gap-4">
-              {result.image ? (
+              {result.image ?? image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={result.image} alt="" className="w-28 rounded-lg border border-edge object-contain shrink-0" />
+                <img src={result.image ?? image ?? ""} alt="" className="w-28 rounded-lg border border-edge object-contain shrink-0" />
               ) : (
                 <div className="w-28 h-40 rounded-lg border border-edge bg-panel-2 flex items-center justify-center text-fog shrink-0">
                   <Icon name="card" className="w-6 h-6" />

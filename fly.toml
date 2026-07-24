@@ -1,0 +1,29 @@
+# HoshiHits ERP — Fly.io config
+# Single machine + a persistent volume, because the SQLite database is one file
+# on disk (SQLite is single-writer — never run more than one machine).
+
+app = "hoshihits-shop"
+primary_region = "sin"   # Singapore — closest Fly region to Cambodia
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DATA_DIR = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Scale to zero when idle to stay cheap; wake on the next request.
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[mounts]
+  source = "hoshihits_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

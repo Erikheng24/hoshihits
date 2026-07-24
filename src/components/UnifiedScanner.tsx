@@ -5,27 +5,32 @@ import { useRouter } from "next/navigation";
 import { Icon } from "./icons";
 import { Portal } from "./Portal";
 import { money } from "@/lib/format";
-import { parseScan, type ItemKind, type ScanFields, type EnrichResult } from "@/lib/scan";
-import type { QuickAddInput } from "@/app/(app)/inventory/enrich";
+import type { ItemKind, ScanFields, EnrichResult } from "@/lib/scan";
+import type { QuickAddInput, PhotoIdResult } from "@/app/(app)/inventory/enrich";
 
 type EnrichFn = (kind: ItemKind, code: string, game?: string) => Promise<EnrichResult>;
 type QuickAddFn = (input: QuickAddInput) => Promise<{ ok: boolean; error?: string; id?: number; sku?: string }>;
+type IdentifyFn = (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
 
 const TYPES: { kind: ItemKind; label: string; hint: string; icon: string }[] = [
-  { kind: "raw", label: "Raw Card", hint: "Photograph the card — pulls art, set & market price", icon: "card" },
-  { kind: "graded", label: "Graded Slab", hint: "Scan the cert QR — PSA / CGC / BGS", icon: "graded" },
-  { kind: "sealed", label: "Booster Box / Pack", hint: "Scan the EAN / UPC barcode", icon: "inventory" },
+  { kind: "raw", label: "Raw Card", hint: "Photograph the card — AI reads name, set & price", icon: "card" },
+  { kind: "graded", label: "Graded Slab", hint: "Photograph the slab — AI reads name, grade & cert", icon: "graded" },
+  { kind: "sealed", label: "Booster Box / Pack", hint: "Photograph the box — AI reads name & set", icon: "inventory" },
 ];
 
 export function UnifiedScanner({
   enrich,
   quickAdd,
+  identify,
   games,
+  initialUsage,
   onClose,
 }: {
   enrich: EnrichFn;
   quickAdd: QuickAddFn;
+  identify: IdentifyFn;
   games: string[];
+  initialUsage?: { used: number; limit: number };
   onClose: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,10 +44,8 @@ export function UnifiedScanner({
   const [game, setGame] = useState("Pokémon");
   const [camError, setCamError] = useState<string | null>(null);
   const [status, setStatus] = useState("");
-  const [progress, setProgress] = useState(0);
   const [note, setNote] = useState<string | null>(null);
   const [source, setSource] = useState<EnrichResult["source"] | null>(null);
-  const [lastRead, setLastRead] = useState<string | null>(null);
 
   const [fields, setFields] = useState<ScanFields>({});
   const [image, setImage] = useState<string | null>(null);
@@ -56,9 +59,7 @@ export function UnifiedScanner({
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ sku: string } | null>(null);
-
-  const usesCode = kind === "graded" || kind === "sealed";
-  const guide = kind === "sealed" ? { w: 0.86, h: 0.5 } : { w: 0.66, h: 0.82 };
+  const [usage, setUsage] = useState(initialUsage ?? null);
 
   const stopCamera = useCallback(() => {
     try { controlsRef.current?.stop(); } catch { /* noop */ }
@@ -67,17 +68,16 @@ export function UnifiedScanner({
     streamRef.current = null;
   }, []);
 
+  // Capture the WHOLE frame (no crop) so vertical or horizontal boxes both fit.
   function cropToGuide(src: HTMLVideoElement | HTMLImageElement): string {
     const sw = "videoWidth" in src ? src.videoWidth : src.naturalWidth;
     const sh = "videoHeight" in src ? src.videoHeight : src.naturalHeight;
-    const cw = sw * guide.w, ch = sh * guide.h;
-    const cx = (sw - cw) / 2, cy = (sh - ch) / 2;
-    const scale = Math.min(1, 760 / Math.max(cw, ch));
+    const scale = Math.min(1, 1024 / Math.max(sw, sh));
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(cw * scale);
-    canvas.height = Math.round(ch * scale);
-    canvas.getContext("2d")!.drawImage(src, cx, cy, cw, ch, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.82);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
+    canvas.getContext("2d")!.drawImage(src, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.9);
   }
 
   function applyResult(res: EnrichResult, fallbackImage: string | null) {
@@ -89,45 +89,24 @@ export function UnifiedScanner({
     if (res.marketPrice) setSell((res.marketPrice / 100).toFixed(2));
   }
 
+  // Typed-name fallback for raw cards → catalog art + price.
   const runLookup = useCallback(
-    async (code: string, fallbackImage: string | null) => {
+    async (code: string) => {
       if (busy.current || !code) return;
       busy.current = true;
-      setLastRead(code);
       setPhase("working");
-      setStatus(kind === "graded" ? "Looking up cert on PSA…" : kind === "sealed" ? "Looking up product…" : "Matching card in catalog…");
+      setStatus("Matching card in catalog…");
       try {
-        const res = await enrich(kind, code, game);
-        applyResult(res, fallbackImage);
-
-        // PSA's free tier allows very few calls a day, so when the lookup comes back
-        // without a name, read the printed slab label instead — it carries the card
-        // name, set and grade anyway. Keeps graded scanning usable with no API quota.
-        if (!res.fields.name && fallbackImage) {
-          setStatus("PSA unavailable — reading the slab label…");
-          const ocr = await runOcr(fallbackImage);
-          if (ocr.name || ocr.grade || ocr.set_name) {
-            setFields((f) => ({
-              ...f,
-              name: f.name || ocr.name,
-              set_name: f.set_name || ocr.set_name,
-              grade: f.grade || ocr.grade,
-              rarity: f.rarity || ocr.rarity,
-              grade_company: f.grade_company || ocr.grade_company,
-            }));
-            setNote("Read from the slab label (PSA lookup unavailable) — please double-check.");
-          }
-        }
+        applyResult(await enrich("raw", code, game), null);
       } catch {
         setNote("Lookup failed — fill the details in by hand.");
-        setImage(fallbackImage);
       }
       stopCamera();
       setPhase("preview");
       busy.current = false;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enrich, kind, game, stopCamera]
+    [enrich, game, stopCamera]
   );
 
   const startCamera = useCallback(async () => {
@@ -142,26 +121,6 @@ export function UnifiedScanner({
       if (!video) return;
       video.srcObject = stream;
       await video.play().catch(() => {});
-
-      if (usesCode) {
-        const { BrowserMultiFormatReader } = await import("@zxing/browser");
-        const { DecodeHintType, BarcodeFormat } = await import("@zxing/library");
-        const hints = new Map();
-        hints.set(
-          DecodeHintType.POSSIBLE_FORMATS,
-          kind === "graded"
-            ? [BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX]
-            : [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128]
-        );
-        hints.set(DecodeHintType.TRY_HARDER, true);
-        const reader = new BrowserMultiFormatReader(hints);
-        controlsRef.current = await reader.decodeFromVideoElement(video, (result) => {
-          if (result && !busy.current) {
-            const frame = videoRef.current && videoRef.current.readyState >= 2 ? cropToGuide(videoRef.current) : null;
-            runLookup(result.getText(), frame);
-          }
-        });
-      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setCamError(
@@ -170,44 +129,54 @@ export function UnifiedScanner({
           : "Camera unavailable — type the details below or upload a photo."
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind, usesCode, runLookup]);
+  }, []);
 
   useEffect(() => {
     if (phase === "camera") startCamera();
     return stopCamera;
   }, [phase, startCamera, stopCamera]);
 
-  async function runOcr(dataUrl: string): Promise<ScanFields> {
-    setStatus("Reading the card…");
-    try {
-      const Tesseract = (await import("tesseract.js")).default;
-      const { data } = await Tesseract.recognize(dataUrl, "eng", {
-        logger: (m: { status: string; progress: number }) => {
-          if (m.status === "recognizing text") setProgress(Math.round(m.progress * 100));
-        },
-      });
-      return parseScan(data.text ?? "", kind === "sealed" ? "sealed" : kind === "graded" ? "graded" : "single");
-    } catch {
-      return {};
-    }
+  /** Typed-name fallback: raw → catalog; graded/box → just take the name. */
+  function manualSubmit(text: string) {
+    const t = text.trim();
+    if (!t) return;
+    if (kind === "raw") { runLookup(t); return; }
+    stopCamera();
+    setFields({ name: t });
+    setSource("none");
+    setNote(null);
+    setPhase("preview");
   }
 
-  /** Raw card: photo → OCR name → catalog lookup for art + price. */
+  /**
+   * One AI reads every type from the photo: raw card, graded slab (name + grade +
+   * cert off the label), or sealed box — plus catalog art + price for raw singles.
+   * The picture is always the photo you just took.
+   */
   async function photoFlow(src: HTMLVideoElement | HTMLImageElement) {
     setPhase("working");
     const cropped = cropToGuide(src);
     setImage(cropped);
-    const ocr = await runOcr(cropped);
-    if (ocr.name) {
-      await runLookup(ocr.name, cropped);
-      return;
+
+    {
+      setStatus("Identifying with AI…");
+      try {
+        const r = await identify(cropped, game);
+        if (r.usage) setUsage(r.usage);
+        if (r.game && games.includes(r.game)) setGame(r.game);
+        applyResult(r, cropped);
+        if (!r.identified || !r.fields.name) {
+          setSource("none");
+          setNote(r.message ?? "Couldn't identify that photo — type the details below.");
+        }
+      } catch {
+        setImage(cropped);
+        setSource("none");
+        setNote("Identification failed — type the details below.");
+      }
+      stopCamera();
+      setPhase("preview");
     }
-    stopCamera();
-    setFields(ocr);
-    setSource("none");
-    setNote("Couldn't read the card name — type it below to search the catalog.");
-    setPhase("preview");
   }
 
   function handleCapture() {
@@ -270,9 +239,9 @@ export function UnifiedScanner({
   function reset() {
     setPhase("type");
     setFields({}); setImage(null); setMarketPrice(undefined);
-    setNote(null); setSource(null); setLastRead(null);
+    setNote(null); setSource(null);
     setManual(""); setCost(""); setSell(""); setQty("1"); setNotes("");
-    setSaveErr(null); setSaved(null); setProgress(0);
+    setSaveErr(null); setSaved(null);
   }
 
   const typeLabel = TYPES.find((t) => t.kind === kind)!.label;
@@ -289,6 +258,18 @@ export function UnifiedScanner({
           </h3>
           <button onClick={onClose} className="text-fog hover:text-white"><Icon name="x" className="w-5 h-5" /></button>
         </div>
+
+        {usage && (
+          <p className="text-[11px] text-center -mt-2 mb-3">
+            <span className="text-fog">AI scans today </span>
+            <span className={`num ${usage.used >= usage.limit ? "text-ruby" : usage.used >= usage.limit * 0.85 ? "text-amberish" : "text-mist"}`}>
+              {usage.used} / {usage.limit}
+            </span>
+            {usage.used >= usage.limit
+              ? <span className="text-ruby"> — daily limit reached, resets tomorrow</span>
+              : <span className="text-fog"> ({usage.limit - usage.used} left today)</span>}
+          </p>
+        )}
 
         {/* ---- 1. Item type ---- */}
         {phase === "type" && (
@@ -325,17 +306,7 @@ export function UnifiedScanner({
         {phase === "camera" && (
           <>
             <div className="relative rounded-xl overflow-hidden bg-black aspect-[3/4] sm:aspect-[4/3]">
-              <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-cover" />
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="border-2 border-gold/80 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"
-                     style={{ width: `${guide.w * 100}%`, height: `${guide.h * 100}%` }} />
-              </div>
-              {usesCode && !camError && (
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 badge bg-black/70 text-gold-soft border border-gold/30 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-                  Scanning {kind === "graded" ? "QR code" : "barcode"}…
-                </div>
-              )}
+              <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-contain" />
               {camError && (
                 <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
                   <p className="text-mist text-sm">{camError}</p>
@@ -347,13 +318,13 @@ export function UnifiedScanner({
               <input
                 value={manual}
                 onChange={(e) => setManual(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && manual.trim() && runLookup(manual.trim(), null)}
+                onKeyDown={(e) => e.key === "Enter" && manual.trim() && manualSubmit(manual)}
                 className="input"
-                placeholder={kind === "graded" ? "…or type cert number" : kind === "sealed" ? "…or type barcode" : "…or type the card name"}
+                placeholder="…or type the name"
               />
-              <button onClick={() => manual.trim() && runLookup(manual.trim(), null)} disabled={!manual.trim()}
-                      className="btn-gold px-4 text-sm shrink-0 disabled:opacity-40">
-                {kind === "raw" ? "Search" : "Look up"}
+              <button onClick={() => manualSubmit(manual)} disabled={!manual.trim()}
+                      className="btn-ghost px-4 text-sm shrink-0 disabled:opacity-40">
+                Use
               </button>
             </div>
 
@@ -365,8 +336,8 @@ export function UnifiedScanner({
                 <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
               </label>
               <button onClick={handleCapture} disabled={!!camError}
-                      className={`${kind === "raw" ? "btn-gold" : "btn-ghost"} px-4 py-2.5 text-sm flex-1 justify-center disabled:opacity-40`}>
-                <Icon name="scan" className="w-4 h-4" /> {kind === "raw" ? "Capture" : "Photo"}
+                      className="btn-gold px-4 py-2.5 text-sm flex-1 justify-center disabled:opacity-40">
+                <Icon name="scan" className="w-4 h-4" /> Capture
               </button>
             </div>
           </>
@@ -376,20 +347,10 @@ export function UnifiedScanner({
         {phase === "working" && (
           <div className="py-10 text-center">
             {image && <img src={image} alt="" className="mx-auto max-h-44 rounded-lg border border-edge mb-5" />}
-            {lastRead && (
-              <p className="text-[11px] text-jade mb-3 num flex items-center justify-center gap-1.5">
-                <Icon name="check" className="w-3.5 h-3.5" /> Read: {lastRead.slice(0, 50)}
-              </p>
-            )}
             <div className="inline-flex items-center gap-2 text-mist text-sm">
               <span className="w-4 h-4 rounded-full border-2 border-gold/40 border-t-gold animate-spin" />
               {status || "Processing…"}
             </div>
-            {progress > 0 && (
-              <div className="h-1.5 rounded-full bg-edge overflow-hidden mt-4 max-w-xs mx-auto">
-                <div className="h-full bg-gold/70 transition-all" style={{ width: `${progress}%` }} />
-              </div>
-            )}
           </div>
         )}
 

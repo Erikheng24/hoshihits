@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getDb } from "@/lib/db";
+import { getDb, getAiUsage } from "@/lib/db";
 import { money, num } from "@/lib/format";
 import { PageHeader, Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
@@ -7,7 +7,7 @@ import { SearchToolbar } from "@/components/SearchToolbar";
 import { ProductFormClient } from "@/components/ProductFormClient";
 import { ScanToAddButton } from "@/components/ScanToAddButton";
 import { saveProductAction, adjustStockAction, archiveProductAction } from "@/app/(app)/inventory/actions";
-import { enrichScan, quickAddProductAction } from "@/app/(app)/inventory/enrich";
+import { enrichScan, quickAddProductAction, identifyPhotoAction } from "@/app/(app)/inventory/enrich";
 
 export const GAMES = [
   "Pokémon", "One Piece", "Yu-Gi-Oh!", "Weiss Schwarz", "Union Arena",
@@ -69,7 +69,7 @@ function ProductModal({ sp, basePath, mode }: { sp: InventorySearchParams; baseP
           <h2 className="font-display text-lg tracking-wide text-white">{editing ? "Edit Product" : "New Product"}</h2>
           <Link href={basePath} className="text-fog hover:text-white"><Icon name="x" className="w-5 h-5" /></Link>
         </div>
-        <ProductFormClient product={p} basePath={basePath} editingId={editing?.id} action={saveProductAction} enrich={enrichScan} />
+        <ProductFormClient product={p} basePath={basePath} editingId={editing?.id} action={saveProductAction} identify={identifyPhotoAction} initialUsage={getAiUsage()} />
       </div>
     </div>
   );
@@ -90,6 +90,7 @@ export function InventoryView({
 }) {
   const forced = mode === "single" ? "single" : mode === "graded" ? "graded" : undefined;
   const products = queryProducts(sp, forced);
+  const aiUsage = getAiUsage();
   const totals = products.reduce(
     (a, p) => ({ units: a.units + p.stock, value: a.value + p.cost * p.stock, retail: a.retail + p.price * p.stock }),
     { units: 0, value: 0, retail: 0 }
@@ -109,7 +110,7 @@ export function InventoryView({
         subtitle={subtitle}
         actions={
           <>
-            <ScanToAddButton enrich={enrichScan} quickAdd={quickAddProductAction} games={GAMES} />
+            <ScanToAddButton enrich={enrichScan} quickAdd={quickAddProductAction} identify={identifyPhotoAction} games={GAMES} initialUsage={aiUsage} />
             <Link href={withParam("new", "1")} className="btn-ghost px-4 py-2 text-sm">
               <Icon name="plus" className="w-4 h-4" /> Add manually
             </Link>
