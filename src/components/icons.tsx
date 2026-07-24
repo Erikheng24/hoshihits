@@ -174,6 +174,7 @@ const PATHS: Record<string, React.ReactNode> = {
     </>
   ),
   chevronRight: <path d="m9 6 6 6-6 6" />,
+  chevronDown: <path d="m6 9 6 6 6-6" />,
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
 };
 
