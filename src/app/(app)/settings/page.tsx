@@ -5,6 +5,7 @@ import { PageHeader, Card, Badge } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { LogoUpload } from "@/components/LogoUpload";
 import { KhqrTest } from "@/components/KhqrTest";
+import { TelegramTest } from "@/components/TelegramTest";
 import { getReceiptConfig } from "@/lib/receipt-config";
 import { saveSettingsAction, resetDataAction } from "./actions";
 
@@ -49,6 +50,40 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
+      </Card>
+
+      <Card title="Customer Shop + Telegram Orders" className="p-5 mb-4">
+        <p className="text-[12px] text-fog mb-4">
+          Share your public shop link so customers can browse stock and order. When they tap <span className="text-mist">Order now</span>,
+          the order is saved in <a href="/web-orders" className="text-gold-dim hover:text-gold underline">Web Orders</a> and sent to your Telegram.
+          Create a free bot with <span className="num text-mist">@BotFather</span> for the token, and get your chat ID by messaging <span className="num text-mist">@userinfobot</span>.
+        </p>
+        <div className="mb-4 flex items-center gap-2 flex-wrap rounded-lg border border-edge bg-panel-2 px-3 py-2">
+          <span className="text-[12px] text-fog">Your shop link:</span>
+          <span className="num text-[12px] text-gold-soft break-all">{(settings.app_base_url || "https://hoshihits.onrender.com").replace(/\/+$/, "")}/shop</span>
+          <a href="/shop" target="_blank" className="btn-ghost px-2.5 py-1 text-[11px] ml-auto">Open shop</a>
+        </div>
+        <form action={saveSettingsAction} className="grid sm:grid-cols-2 gap-4">
+          <label className="field sm:col-span-2"><span>Welcome message (shown on the shop)</span>
+            <input name="shop_welcome" className="input" defaultValue={settings.shop_welcome ?? ""} placeholder="Welcome! Browse our stock and order on Telegram." />
+          </label>
+          <label className="field sm:col-span-2"><span>Telegram bot token (from @BotFather)</span>
+            <input name="telegram_bot_token" className="input num" defaultValue={settings.telegram_bot_token ?? ""} placeholder="123456:ABC-..." />
+          </label>
+          <label className="field"><span>Your chat ID (orders sent here)</span>
+            <input name="telegram_admin_chat_id" className="input num" defaultValue={settings.telegram_admin_chat_id ?? ""} placeholder="e.g. 123456789" />
+          </label>
+          <label className="field"><span>Your @username (customer chats here)</span>
+            <input name="telegram_admin_username" className="input" defaultValue={settings.telegram_admin_username ?? ""} placeholder="@HoshiHits" />
+          </label>
+          <div className="sm:col-span-2 flex items-center justify-between gap-3 flex-wrap">
+            <Badge tone={settings.telegram_bot_token && settings.telegram_admin_chat_id ? "green" : "gray"}>
+              {settings.telegram_bot_token && settings.telegram_admin_chat_id ? "Bot connected" : "Bot not set up"}
+            </Badge>
+            <button className="btn-gold px-5 py-2 text-sm">Save shop settings</button>
+          </div>
+        </form>
+        <div className="mt-4 pt-4 border-t border-edge/70"><TelegramTest /></div>
       </Card>
 
       <Card title="KHQR Payment (Bakong)" className="p-5 mb-4">

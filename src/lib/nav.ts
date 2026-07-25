@@ -10,6 +10,7 @@ export const NAV: NavItem[] = [
   { key: "dashboard", href: "/dashboard", label: "Dashboard", icon: "dashboard", section: "Store" },
   { key: "pos", href: "/pos", label: "POS", icon: "pos", section: "Store" },
   { key: "customers", href: "/customers", label: "Customers", icon: "customers", section: "Store" },
+  { key: "web-orders", href: "/web-orders", label: "Web Orders", icon: "receipt", section: "Store" },
   { key: "tradein", href: "/tradein", label: "Trade-In / Buylist", icon: "tradein", section: "Store" },
   { key: "preorders", href: "/preorders", label: "Preorders", icon: "preorder", section: "Store" },
   { key: "tournaments", href: "/tournaments", label: "Tournaments", icon: "tournament", section: "Store" },

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getDb, audit } from "@/lib/db";
 import { requireModule } from "@/lib/auth";
 import { testKhqr } from "@/lib/payments";
+import { sendTelegram } from "@/lib/providers/telegram";
 
 const KEYS = [
   "store_name", "store_tagline", "store_address", "store_phone", "receipt_footer",
@@ -16,6 +17,8 @@ const KEYS = [
   "khqr_account_id", "khqr_merchant_name", "khqr_city", "khqr_phone", "bakong_api_token",
   // ABA PayWay gateway
   "payway_merchant_id", "payway_api_key", "payway_sandbox", "payway_qr", "app_base_url",
+  // Customer storefront + Telegram ordering
+  "shop_enabled", "shop_welcome", "telegram_bot_token", "telegram_admin_chat_id", "telegram_admin_username",
 ];
 // Checkboxes: absent from the form data means "off", so they need explicit handling.
 const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_phone", "receipt_show_staff"];
@@ -24,6 +27,13 @@ const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_p
 export async function testKhqrAction(): Promise<{ ok: boolean; message: string; image?: string }> {
   requireModule("settings");
   return testKhqr();
+}
+
+/** Send a test message to the shop's Telegram to verify the bot config. */
+export async function testTelegramAction(): Promise<{ ok: boolean; message: string }> {
+  requireModule("settings");
+  const res = await sendTelegram("✅ <b>HoshiHits test</b> — your shop's Telegram is connected. New orders will arrive here.");
+  return { ok: res.ok, message: res.ok ? "Test message sent — check your Telegram." : res.message ?? "Failed to send." };
 }
 
 export async function saveSettingsAction(formData: FormData) {
@@ -58,8 +68,8 @@ export async function saveSettingsAction(formData: FormData) {
  * staff logins, shop configuration and the AI quota counter all survive.
  */
 const RESET_TABLES = [
-  "sale_items", "shipments", "po_items", "tradein_items",
-  "preorders", "sales", "tradeins", "purchase_orders",
+  "web_order_items", "sale_items", "shipments", "po_items", "tradein_items",
+  "web_orders", "preorders", "sales", "tradeins", "purchase_orders",
   "expenses", "tournaments", "products", "customers", "suppliers",
   "audit_log",
 ];

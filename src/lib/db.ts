@@ -242,6 +242,29 @@ CREATE TABLE IF NOT EXISTS payments (
   expires_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status, id);
+
+-- Public storefront orders: a customer picks items on /shop and taps "Order now",
+-- which saves the request here and sends it to the shop's Telegram. Payment is
+-- arranged in chat, so these are requests the shop fulfils manually.
+CREATE TABLE IF NOT EXISTS web_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  number TEXT NOT NULL UNIQUE,
+  customer_name TEXT NOT NULL,
+  customer_phone TEXT NOT NULL,
+  note TEXT,
+  total INTEGER NOT NULL,           -- cents
+  status TEXT NOT NULL DEFAULT 'new', -- new | contacted | paid | fulfilled | cancelled
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS web_order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL REFERENCES web_orders(id),
+  product_id INTEGER REFERENCES products(id),
+  name TEXT NOT NULL,
+  qty INTEGER NOT NULL,
+  unit_price INTEGER NOT NULL       -- cents
+);
+CREATE INDEX IF NOT EXISTS idx_web_orders_status ON web_orders(status, id);
 `;
 
 /** Local-time timestamp "YYYY-MM-DD HH:MM:SS" so SQLite date() works naturally. */

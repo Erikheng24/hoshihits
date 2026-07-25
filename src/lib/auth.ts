@@ -70,6 +70,7 @@ export const ACCESS: Record<string, Role[]> = {
   preorders: ["OWNER", "MANAGER", "CASHIER"],
   shipments: ["OWNER", "MANAGER", "INVENTORY"],
   customers: ["OWNER", "MANAGER", "CASHIER"],
+  "web-orders": ["OWNER", "MANAGER", "CASHIER"],
   tradein: ["OWNER", "MANAGER", "CASHIER"],
   tournaments: ["OWNER", "MANAGER", "CASHIER"],
   suppliers: ["OWNER", "MANAGER", "INVENTORY"],
