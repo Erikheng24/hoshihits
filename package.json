@@ -11,12 +11,14 @@
   "dependencies": {
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
+    "bakong-khqr": "^1.0.20",
     "better-sqlite3": "^12.2.0",
     "exceljs": "^4.4.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "libsql": "^0.5.29",
     "next": "^14.2.35",
+    "qrcode": "^1.5.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "tesseract.js": "^5.1.1"

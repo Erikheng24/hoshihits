@@ -50,9 +50,42 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      <Card title="KHQR Payment (Bakong)" className="p-5 mb-4">
+        <p className="text-[12px] text-fog mb-4">
+          Take Cambodian QR payments at checkout. The customer scans a dynamic KHQR on a spare phone
+          (open <a href="/display" target="_blank" className="text-gold-dim hover:text-gold underline">the customer display</a> on it),
+          and once Bakong confirms payment the receipt prints and saves automatically. Get a free Bakong Open API token at{" "}
+          <span className="num text-mist">api-bakong.nbc.gov.kh</span> (tokens expire — paste a fresh one here when needed).
+        </p>
+        <form action={saveSettingsAction} className="grid sm:grid-cols-2 gap-4">
+          <label className="field"><span>Bakong Account ID *</span>
+            <input name="khqr_account_id" className="input num" defaultValue={settings.khqr_account_id ?? ""} placeholder="e.g. sokheng@aclb" />
+          </label>
+          <label className="field"><span>Merchant name (on QR)</span>
+            <input name="khqr_merchant_name" className="input" defaultValue={settings.khqr_merchant_name ?? ""} placeholder="HoshiHits" maxLength={25} />
+          </label>
+          <label className="field"><span>City</span>
+            <input name="khqr_city" className="input" defaultValue={settings.khqr_city ?? ""} placeholder="Phnom Penh" maxLength={15} />
+          </label>
+          <label className="field"><span>Mobile number (optional)</span>
+            <input name="khqr_phone" className="input num" defaultValue={settings.khqr_phone ?? ""} placeholder="85512345678" />
+          </label>
+          <label className="field sm:col-span-2"><span>Bakong API token (for auto-detecting payment)</span>
+            <input name="bakong_api_token" className="input num" defaultValue={settings.bakong_api_token ?? ""} placeholder="Paste your Bakong Open API token" />
+          </label>
+          <div className="sm:col-span-2 flex items-center justify-between gap-3">
+            <Badge tone={settings.khqr_account_id ? (settings.bakong_api_token ? "green" : "amber") : "gray"}>
+              {settings.khqr_account_id ? (settings.bakong_api_token ? "READY — auto-detect on" : "QR ready — add token for auto-detect") : "Not set up"}
+            </Badge>
+            <button className="btn-gold px-5 py-2 text-sm">Save KHQR settings</button>
+          </div>
+        </form>
+      </Card>
+
       <div className="grid lg:grid-cols-2 gap-4">
         <Card title="Store Profile" className="p-5">
           <form action={saveSettingsAction} className="space-y-4">
+            <input type="hidden" name="has_toggles" value="1" />
             <LogoUpload initial={settings.logo?.startsWith("data:image/") ? settings.logo : null} />
             <label className="field"><span>Store name</span><input name="store_name" className="input" defaultValue={settings.store_name ?? ""} /></label>
             <label className="field"><span>Tagline</span><input name="store_tagline" className="input" defaultValue={settings.store_tagline ?? ""} /></label>

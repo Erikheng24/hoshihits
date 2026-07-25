@@ -220,6 +220,26 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   count INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (day, provider)
 );
+
+-- Pending KHQR payments: the cashier starts one, the customer display shows the
+-- QR, and Bakong is polled until it is paid — then the sale is committed.
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ref TEXT NOT NULL,               -- short reference printed on the QR (bill number)
+  md5 TEXT NOT NULL,               -- KHQR md5, used to check payment status at Bakong
+  qr TEXT NOT NULL,                -- the raw KHQR string
+  image TEXT NOT NULL,             -- QR as a data URL, shown on the customer display
+  amount INTEGER NOT NULL,         -- cents
+  currency TEXT NOT NULL DEFAULT 'USD',
+  status TEXT NOT NULL DEFAULT 'pending',  -- pending | paid | expired | cancelled
+  cart TEXT NOT NULL,              -- JSON snapshot of the checkout (committed on payment)
+  customer_id INTEGER,
+  sale_id INTEGER,                 -- the sale created once paid
+  user_id INTEGER,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status, id);
 `;
 
 /** Local-time timestamp "YYYY-MM-DD HH:MM:SS" so SQLite date() works naturally. */

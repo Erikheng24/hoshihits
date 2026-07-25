@@ -11,6 +11,8 @@ const KEYS = [
   "receipt_logo_size", "receipt_font_scale", "receipt_header_note",
   // AI scanning
   "ai_daily_limit",
+  // KHQR payment (Bakong)
+  "khqr_account_id", "khqr_merchant_name", "khqr_city", "khqr_phone", "bakong_api_token",
 ];
 // Checkboxes: absent from the form data means "off", so they need explicit handling.
 const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_phone", "receipt_show_staff"];
@@ -24,7 +26,12 @@ export async function saveSettingsAction(formData: FormData) {
     if (v !== null) up.run(key, String(v).trim());
   }
 
-  for (const key of TOGGLES) up.run(key, formData.get(key) ? "1" : "0");
+  // Checkboxes only exist on the Store Profile form; other settings forms (e.g.
+  // KHQR) must not silently reset them, so only touch toggles when that form
+  // marks itself present.
+  if (formData.get("has_toggles")) {
+    for (const key of TOGGLES) up.run(key, formData.get(key) ? "1" : "0");
+  }
 
   // Logo: a downscaled data URL, or empty to clear it. Capped so a stray upload
   // can't bloat the settings row.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 
 /**
@@ -55,9 +55,11 @@ function downloadBlob(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function ReceiptActions({ fileName }: { fileName: string }) {
+export function ReceiptActions({ fileName, auto = false }: { fileName: string; auto?: boolean }) {
   const [busy, setBusy] = useState<null | "image" | "pdf">(null);
   const [err, setErr] = useState<string | null>(null);
+  const [autoNote, setAutoNote] = useState<string | null>(auto ? "Saving receipt and opening the printer…" : null);
+  const autoRan = useRef(false);
 
   async function saveImage() {
     setErr(null);
@@ -103,8 +105,34 @@ export function ReceiptActions({ fileName }: { fileName: string }) {
     }
   }
 
+  // Auto mode (after a KHQR payment): save the PDF, then open the printer — once.
+  useEffect(() => {
+    if (!auto || autoRan.current) return;
+    autoRan.current = true;
+    const run = async () => {
+      // Give the receipt a moment to render/lay out fonts before capturing.
+      await new Promise((r) => setTimeout(r, 700));
+      try {
+        await savePdf(); // downloads Receipt-<n>.pdf automatically
+      } catch {
+        /* savePdf surfaces its own error */
+      }
+      setAutoNote("Receipt saved as PDF. Opening the printer…");
+      await new Promise((r) => setTimeout(r, 400));
+      try {
+        window.print();
+      } catch {
+        /* some devices ignore window.print — the manual buttons remain */
+      }
+      setAutoNote("Receipt saved. If it didn't print, tap Save image or Print below.");
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto]);
+
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
+      {autoNote && <span className="text-[11px] text-jade w-full text-right">{autoNote}</span>}
       {err && <span className="text-[11px] text-ruby w-full text-right">{err}</span>}
       <button onClick={saveImage} disabled={!!busy} className="btn-gold px-4 py-2 text-sm disabled:opacity-60">
         <Icon name="export" className="w-4 h-4" /> {busy === "image" ? "Saving…" : "Save image"}

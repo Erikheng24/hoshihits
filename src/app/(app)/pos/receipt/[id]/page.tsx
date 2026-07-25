@@ -8,9 +8,10 @@ import { getReceiptConfig } from "@/lib/receipt-config";
 
 export const dynamic = "force-dynamic";
 
-export default function ReceiptPage({ params }: { params: { id: string } }) {
+export default function ReceiptPage({ params, searchParams }: { params: { id: string }; searchParams: { autoprint?: string } }) {
   requireModule("pos");
   const db = getDb();
+  const autoprint = searchParams.autoprint === "1";
   const sale = db
     .prepare(
       `SELECT s.*, c.name customer_name, u.name cashier
@@ -27,8 +28,8 @@ export default function ReceiptPage({ params }: { params: { id: string } }) {
   return (
     <div className="max-w-sm mx-auto">
       <div className="flex items-center justify-between mb-4 no-print">
-        <Link href="/pos" className="btn-ghost px-3 py-2 text-sm">← Back</Link>
-        <ReceiptActions fileName={`receipt-${sale.number}`} />
+        <Link href="/pos" className="btn-ghost px-3 py-2 text-sm">← {autoprint ? "New sale" : "Back"}</Link>
+        <ReceiptActions fileName={`receipt-${sale.number}`} auto={autoprint} />
       </div>
 
       <div className="card p-6 print-receipt" style={{ fontSize: `${(13 * cfg.fontScale).toFixed(1)}px` }}>
