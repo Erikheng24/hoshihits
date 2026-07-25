@@ -276,6 +276,25 @@ function migrate(db: DbConn) {
   if (!cols("ai_usage").includes("provider")) {
     db.exec(`ALTER TABLE ai_usage ADD COLUMN provider TEXT NOT NULL DEFAULT 'gemini'`);
   }
+  // ai_usage was originally keyed by day alone; per-provider counting needs a
+  // composite PK (day, provider). ALTER can't change a primary key, so on
+  // databases created before that change we rebuild the table once — otherwise
+  // recordAiScan's ON CONFLICT(day, provider) throws and every scan fails.
+  const aiPk = (db.prepare("PRAGMA table_info(ai_usage)").all() as { name: string; pk: number }[]).filter((c) => c.pk > 0);
+  if (aiPk.length < 2) {
+    db.exec(`
+      CREATE TABLE ai_usage_new (
+        day TEXT NOT NULL,
+        provider TEXT NOT NULL DEFAULT 'gemini',
+        count INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (day, provider)
+      );
+      INSERT INTO ai_usage_new (day, provider, count)
+        SELECT day, COALESCE(provider, 'gemini'), count FROM ai_usage;
+      DROP TABLE ai_usage;
+      ALTER TABLE ai_usage_new RENAME TO ai_usage;
+    `);
+  }
   // Payments gained provider/channel once ABA PayWay was added alongside Bakong.
   const paymentCols = cols("payments");
   if (paymentCols.length) {
