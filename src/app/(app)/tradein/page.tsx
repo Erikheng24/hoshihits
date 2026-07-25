@@ -1,4 +1,5 @@
 import { requireModule } from "@/lib/auth";
+import { SHOP_NOW } from "@/lib/tz";
 import { ReportActions } from "@/components/ReportActions";
 import { getDb } from "@/lib/db";
 import { money, num, shortDateTime } from "@/lib/format";
@@ -22,7 +23,7 @@ export default function TradeinPage() {
 
   const stats = db
     .prepare(
-      `SELECT COALESCE(SUM(CASE WHEN date(created_at) >= date('now','localtime','-29 day') THEN total ELSE 0 END),0) month_total,
+      `SELECT COALESCE(SUM(CASE WHEN date(created_at) >= date(${SHOP_NOW},'-29 day') THEN total ELSE 0 END),0) month_total,
               COUNT(*) count,
               COALESCE(SUM(total),0) all_total
        FROM tradeins`

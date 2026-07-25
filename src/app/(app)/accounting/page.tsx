@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SHOP_NOW } from "@/lib/tz";
 import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -19,14 +20,14 @@ export default function AccountingPage({ searchParams }: { searchParams: { new?:
     .prepare(
       `SELECT strftime('%Y-%m', created_at) month,
               SUM(total) revenue, SUM(cost_total) cogs, SUM(total - cost_total) gross
-       FROM sales WHERE status='completed' AND created_at >= date('now','localtime','start of month','-3 months')
+       FROM sales WHERE status='completed' AND created_at >= date(${SHOP_NOW},'start of month','-3 months')
        GROUP BY month ORDER BY month DESC`
     )
     .all() as { month: string; revenue: number; cogs: number; gross: number }[];
   const expByMonth = db
     .prepare(
       `SELECT strftime('%Y-%m', date) month, SUM(amount) total
-       FROM expenses WHERE date >= date('now','localtime','start of month','-3 months')
+       FROM expenses WHERE date >= date(${SHOP_NOW},'start of month','-3 months')
        GROUP BY month`
     )
     .all() as { month: string; total: number }[];
@@ -45,7 +46,7 @@ export default function AccountingPage({ searchParams }: { searchParams: { new?:
   const byCategory = db
     .prepare(
       `SELECT category, SUM(amount) total FROM expenses
-       WHERE strftime('%Y-%m', date) = strftime('%Y-%m','now','localtime')
+       WHERE strftime('%Y-%m', date) = strftime('%Y-%m',${SHOP_NOW})
        GROUP BY category ORDER BY total DESC`
     )
     .all() as { category: string; total: number }[];

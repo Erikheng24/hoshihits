@@ -1,3 +1,4 @@
+import "./tz"; // must run before any Date or SQLite 'localtime' use
 import Database from "libsql";
 import path from "path";
 import fs from "fs";

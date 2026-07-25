@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SHOP_NOW } from "@/lib/tz";
 import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -19,7 +20,7 @@ export default function ReportsPage({ searchParams }: { searchParams: { days?: s
   requireModule("reports");
   const db = getDb();
   const days = RANGES.some((r) => r.days === Number(searchParams.days)) ? Number(searchParams.days) : 30;
-  const since = `date('now','localtime','-${days - 1} day')`;
+  const since = `date(${SHOP_NOW},'-${days - 1} day')`;
 
   const totals = db
     .prepare(
@@ -81,11 +82,11 @@ export default function ReportsPage({ searchParams }: { searchParams: { days?: s
   const movers = db
     .prepare(
       `SELECT si.name,
-              SUM(CASE WHEN date(s.created_at) >= date('now','localtime','-${days - 1} day') THEN si.qty ELSE 0 END) AS now_qty,
-              SUM(CASE WHEN date(s.created_at) <  date('now','localtime','-${days - 1} day')
-                        AND date(s.created_at) >= date('now','localtime','-${days * 2 - 1} day') THEN si.qty ELSE 0 END) AS prev_qty
+              SUM(CASE WHEN date(s.created_at) >= date(${SHOP_NOW},'-${days - 1} day') THEN si.qty ELSE 0 END) AS now_qty,
+              SUM(CASE WHEN date(s.created_at) <  date(${SHOP_NOW},'-${days - 1} day')
+                        AND date(s.created_at) >= date(${SHOP_NOW},'-${days * 2 - 1} day') THEN si.qty ELSE 0 END) AS prev_qty
        FROM sale_items si JOIN sales s ON s.id = si.sale_id
-       WHERE s.status='completed' AND date(s.created_at) >= date('now','localtime','-${days * 2 - 1} day')
+       WHERE s.status='completed' AND date(s.created_at) >= date(${SHOP_NOW},'-${days * 2 - 1} day')
        GROUP BY si.name
        HAVING now_qty > 0 OR prev_qty > 0`
     )

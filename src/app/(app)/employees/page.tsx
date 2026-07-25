@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SHOP_NOW } from "@/lib/tz";
 import { ReportActions } from "@/components/ReportActions";
 import { requireModule } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -19,8 +20,8 @@ export default function EmployeesPage({ searchParams }: { searchParams: { new?: 
   const users = db
     .prepare(
       `SELECT u.*,
-        (SELECT COUNT(*) FROM sales s WHERE s.user_id = u.id AND date(s.created_at) >= date('now','localtime','-29 day')) sales_30d,
-        (SELECT COALESCE(SUM(total),0) FROM sales s WHERE s.user_id = u.id AND date(s.created_at) >= date('now','localtime','-29 day')) revenue_30d,
+        (SELECT COUNT(*) FROM sales s WHERE s.user_id = u.id AND date(s.created_at) >= date(${SHOP_NOW},'-29 day')) sales_30d,
+        (SELECT COALESCE(SUM(total),0) FROM sales s WHERE s.user_id = u.id AND date(s.created_at) >= date(${SHOP_NOW},'-29 day')) revenue_30d,
         (SELECT MAX(created_at) FROM audit_log a WHERE a.user_id = u.id) last_action
        FROM users u ORDER BY u.active DESC, u.role`
     )

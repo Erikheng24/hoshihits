@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SHOP_NOW } from "@/lib/tz";
 import { getDb } from "@/lib/db";
 import { getSession, canAccess } from "@/lib/auth";
 
@@ -25,7 +26,7 @@ export function GET(req: NextRequest) {
        JOIN sale_items si ON si.sale_id = s.id
        LEFT JOIN customers c ON c.id = s.customer_id
        LEFT JOIN users u ON u.id = s.user_id
-       WHERE s.status='completed' AND date(s.created_at) >= date('now','localtime','-' || ? || ' day')
+       WHERE s.status='completed' AND date(s.created_at) >= date(${SHOP_NOW},'-' || ? || ' day')
        ORDER BY s.id DESC`
     )
     .all(days - 1) as Record<string, unknown>[];
