@@ -51,22 +51,33 @@ export async function saveProductAction(formData: FormData) {
   if (!["sealed", "single", "graded", "accessory"].includes(fields.category)) throw new Error("Invalid category.");
   if (fields.price < 0 || fields.cost < 0) throw new Error("Invalid price.");
 
+  // NOTE: positional (?) parameters only. libsql's Turso write-forwarding
+  // (Hrana) binds @named parameters to NULL, so every named write silently
+  // failed in production. Keep all writes positional.
+  const f = fields;
   if (id) {
     // Only touch the stored image when a new one was supplied, or it was explicitly cleared.
     if (image || clearImage) {
       db.prepare(
-        `UPDATE products SET name=@name, game=@game, category=@category, set_name=@set_name, rarity=@rarity,
-          condition=@condition, language=@language, foil=@foil, grade_company=@grade_company, grade=@grade,
-          cert_number=@cert_number, barcode=@barcode, image=@image, price=@price, cost=@cost, stock=@stock, low_stock=@low_stock
-         WHERE id=@id`
-      ).run({ ...fields, image: clearImage ? null : image, id });
+        `UPDATE products SET name=?, game=?, category=?, set_name=?, rarity=?,
+          condition=?, language=?, foil=?, grade_company=?, grade=?,
+          cert_number=?, barcode=?, image=?, price=?, cost=?, stock=?, low_stock=?
+         WHERE id=?`
+      ).run(
+        f.name, f.game, f.category, f.set_name, f.rarity, f.condition, f.language, f.foil,
+        f.grade_company, f.grade, f.cert_number, f.barcode, clearImage ? null : image,
+        f.price, f.cost, f.stock, f.low_stock, id
+      );
     } else {
       db.prepare(
-        `UPDATE products SET name=@name, game=@game, category=@category, set_name=@set_name, rarity=@rarity,
-          condition=@condition, language=@language, foil=@foil, grade_company=@grade_company, grade=@grade,
-          cert_number=@cert_number, barcode=@barcode, price=@price, cost=@cost, stock=@stock, low_stock=@low_stock
-         WHERE id=@id`
-      ).run({ ...fields, id });
+        `UPDATE products SET name=?, game=?, category=?, set_name=?, rarity=?,
+          condition=?, language=?, foil=?, grade_company=?, grade=?,
+          cert_number=?, barcode=?, price=?, cost=?, stock=?, low_stock=?
+         WHERE id=?`
+      ).run(
+        f.name, f.game, f.category, f.set_name, f.rarity, f.condition, f.language, f.foil,
+        f.grade_company, f.grade, f.cert_number, f.barcode, f.price, f.cost, f.stock, f.low_stock, id
+      );
     }
     audit(user.id, "inventory.update", "product", id, fields.name);
   } else {
@@ -79,10 +90,12 @@ export async function saveProductAction(formData: FormData) {
       .prepare(
         `INSERT INTO products (sku, barcode, name, game, category, set_name, rarity, condition, language, foil,
           grade_company, grade, cert_number, image, price, cost, stock, low_stock, active, created_at)
-         VALUES (@sku, @barcode, @name, @game, @category, @set_name, @rarity, @condition, @language, @foil,
-          @grade_company, @grade, @cert_number, @image, @price, @cost, @stock, @low_stock, 1, @created_at)`
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)`
       )
-      .run({ ...fields, image, sku, created_at: ts() });
+      .run(
+        sku, f.barcode, f.name, f.game, f.category, f.set_name, f.rarity, f.condition, f.language, f.foil,
+        f.grade_company, f.grade, f.cert_number, image, f.price, f.cost, f.stock, f.low_stock, ts()
+      );
     audit(user.id, "inventory.create", "product", Number(r.lastInsertRowid), fields.name);
   }
 

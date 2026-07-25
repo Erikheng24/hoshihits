@@ -108,34 +108,34 @@ export async function quickAddProductAction(
     const n = (db.prepare("SELECT COUNT(*) c FROM products").get() as { c: number }).c + 1;
     const sku = `${code}-${String(n).padStart(4, "0")}`;
 
+    // Positional params only — libsql's Turso write-forwarding binds @named to NULL.
     const r = db
       .prepare(
         `INSERT INTO products (sku, barcode, name, game, category, set_name, rarity, condition, language, foil,
           grade_company, grade, cert_number, image, notes, market_price, price, cost, stock, low_stock, active, created_at)
-         VALUES (@sku, @barcode, @name, @game, @category, @set_name, @rarity, @condition, 'EN', 0,
-          @grade_company, @grade, @cert_number, @image, @notes, @market_price, @price, @cost, @stock, @low_stock, 1, @created_at)`
+         VALUES (?,?,?,?,?,?,?,?, 'EN', 0, ?,?,?,?,?,?,?,?,?,?, 1, ?)`
       )
-      .run({
+      .run(
         sku,
-        barcode: input.barcode?.trim() || null,
+        input.barcode?.trim() || null,
         name,
         game,
         category,
-        set_name: input.set_name?.trim() || null,
-        rarity: input.rarity?.trim() || null,
-        condition: input.condition?.trim() || null,
-        grade_company: input.grade_company?.trim() || null,
-        grade: input.grade?.trim() || null,
-        cert_number: input.cert_number?.trim() || null,
+        input.set_name?.trim() || null,
+        input.rarity?.trim() || null,
+        input.condition?.trim() || null,
+        input.grade_company?.trim() || null,
+        input.grade?.trim() || null,
+        input.cert_number?.trim() || null,
         image,
-        notes: input.notes?.trim() || null,
-        market_price: input.marketPrice ?? null,
-        price: Math.round(input.priceCents),
-        cost: Math.round(input.costCents),
-        stock: qty,
-        low_stock: category === "graded" ? 0 : 2,
-        created_at: ts(),
-      });
+        input.notes?.trim() || null,
+        input.marketPrice ?? null,
+        Math.round(input.priceCents),
+        Math.round(input.costCents),
+        qty,
+        category === "graded" ? 0 : 2,
+        ts()
+      );
 
     const id = Number(r.lastInsertRowid);
     audit(user.id, "inventory.quick_add", "product", id, `${sku} — ${name} (scanned)`);
