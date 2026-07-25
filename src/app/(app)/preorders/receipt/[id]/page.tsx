@@ -89,9 +89,17 @@ export default function PreorderReceiptPage({ params }: { params: { id: string }
             <tbody>
               <tr>
                 <td className="py-1 pr-2 text-mist">
-                  {p.product_name}
-                  {p.game && <span className="block text-[0.85em] text-fog">{p.game}</span>}
-                  <span className="block text-[0.85em] text-fog num">{p.qty} × {money(p.unit_price)}</span>
+                  <div className="flex items-start gap-2">
+                    {p.image && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.image} alt="" className="w-[3em] h-[3em] object-cover rounded border border-edge shrink-0" />
+                    )}
+                    <span>
+                      {p.product_name}
+                      {p.game && <span className="block text-[0.85em] text-fog">{p.game}</span>}
+                      <span className="block text-[0.85em] text-fog num">{p.qty} × {money(p.unit_price)}</span>
+                    </span>
+                  </div>
                 </td>
                 <td className="py-1 text-right num text-white align-top">{money(total)}</td>
               </tr>

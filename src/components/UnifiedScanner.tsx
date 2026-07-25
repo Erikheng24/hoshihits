@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "./icons";
 import { Portal } from "./Portal";
+import { AiBattery, type AiUsageLike } from "./AiBattery";
 import { money } from "@/lib/format";
 import type { ItemKind, ScanFields, EnrichResult } from "@/lib/scan";
 import type { QuickAddInput, PhotoIdResult } from "@/app/(app)/inventory/enrich";
@@ -30,7 +31,7 @@ export function UnifiedScanner({
   quickAdd: QuickAddFn;
   identify: IdentifyFn;
   games: string[];
-  initialUsage?: { used: number; limit: number };
+  initialUsage?: AiUsageLike;
   onClose: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -259,17 +260,7 @@ export function UnifiedScanner({
           <button onClick={onClose} className="text-fog hover:text-white"><Icon name="x" className="w-5 h-5" /></button>
         </div>
 
-        {usage && (
-          <p className="text-[11px] text-center -mt-2 mb-3">
-            <span className="text-fog">AI scans today </span>
-            <span className={`num ${usage.used >= usage.limit ? "text-ruby" : usage.used >= usage.limit * 0.85 ? "text-amberish" : "text-mist"}`}>
-              {usage.used} / {usage.limit}
-            </span>
-            {usage.used >= usage.limit
-              ? <span className="text-ruby"> — daily limit reached, resets tomorrow</span>
-              : <span className="text-fog"> ({usage.limit - usage.used} left today)</span>}
-          </p>
-        )}
+        {usage && <AiBattery usage={usage} className="-mt-2 mb-3" />}
 
         {/* ---- 1. Item type ---- */}
         {phase === "type" && (

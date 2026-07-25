@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 import { Portal } from "./Portal";
+import { AiBattery, type AiUsageLike } from "./AiBattery";
 import { type ScanMode, type ScanFields, type EnrichResult } from "@/lib/scan";
 import type { PhotoIdResult } from "@/app/(app)/inventory/enrich";
 
@@ -24,7 +25,7 @@ export function ScanCapture({
 }: {
   mode: ScanMode;
   identify: IdentifyFn;
-  initialUsage?: { used: number; limit: number };
+  initialUsage?: AiUsageLike;
   onApply: (fields: ScanFields, image: string) => void;
   onClose: () => void;
 }) {
@@ -149,17 +150,7 @@ export function ScanCapture({
           <button onClick={onClose} className="text-fog hover:text-white"><Icon name="x" className="w-5 h-5" /></button>
         </div>
 
-        {usage && (
-          <p className="text-[11px] text-center -mt-2 mb-3">
-            <span className="text-fog">AI scans today </span>
-            <span className={`num ${usage.used >= usage.limit ? "text-ruby" : usage.used >= usage.limit * 0.85 ? "text-amberish" : "text-mist"}`}>
-              {usage.used} / {usage.limit}
-            </span>
-            {usage.used >= usage.limit
-              ? <span className="text-ruby"> — daily limit reached, resets tomorrow</span>
-              : <span className="text-fog"> ({usage.limit - usage.used} left today)</span>}
-          </p>
-        )}
+        {usage && <AiBattery usage={usage} className="-mt-2 mb-3" />}
 
         {phase === "camera" && (
           <>

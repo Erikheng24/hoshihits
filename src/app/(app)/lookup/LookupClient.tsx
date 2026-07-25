@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/icons";
+import { AiBattery, type AiUsageLike } from "@/components/AiBattery";
 import { money } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/image-client";
 import type { ItemKind, EnrichResult } from "@/lib/scan";
@@ -24,7 +25,7 @@ export function LookupClient({
 }: {
   enrich: (kind: ItemKind, code: string, game?: string) => Promise<EnrichResult>;
   identify: (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
-  initialUsage?: { used: number; limit: number };
+  initialUsage?: AiUsageLike;
 }) {
   const [game, setGame] = useState("Pokémon");
   const [image, setImage] = useState<string | null>(null);
@@ -82,17 +83,7 @@ export function LookupClient({
         <p className="text-[13px] text-mist mb-3">
           Take or upload a photo of the card, slab or box. The AI reads it — Japanese product included — and the photo is the picture.
         </p>
-        {usage && (
-          <p className="text-[11px] mb-3">
-            <span className="text-fog">AI scans today </span>
-            <span className={`num ${usage.used >= usage.limit ? "text-ruby" : usage.used >= usage.limit * 0.85 ? "text-amberish" : "text-mist"}`}>
-              {usage.used} / {usage.limit}
-            </span>
-            {usage.used >= usage.limit
-              ? <span className="text-ruby"> — daily limit reached, resets tomorrow</span>
-              : <span className="text-fog"> ({usage.limit - usage.used} left today)</span>}
-          </p>
-        )}
+        {usage && <AiBattery usage={usage} className="mb-3 justify-start" />}
 
         <div className="flex gap-2 mb-3">
           <select className="input !w-auto" value={game} onChange={(e) => setGame(e.target.value)}>

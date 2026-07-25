@@ -82,7 +82,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const lastCol = def.columns.length;
+  // Sections with photos get an extra leading "Photo" column that holds an
+  // embedded thumbnail; every other column shifts one to the right.
+  const imgCol = def.thumbnail ? 1 : 0;
+  const lastCol = def.columns.length + imgCol;
   const colLetter = (n: number) => ws.getColumn(n).letter;
   const span = (r: number) => `A${r}:${colLetter(lastCol)}${r}`;
 
@@ -114,25 +117,50 @@ export async function GET(req: NextRequest) {
 
   // Header row
   const header = ws.getRow(5);
-  def.columns.forEach((col, i) => {
-    const cell = header.getCell(i + 1);
-    cell.value = col.header;
+  const styleHeaderCell = (cell: ExcelJS.Cell, label: string, right: boolean) => {
+    cell.value = label;
     cell.font = { name: "Calibri", size: 10.5, bold: true, color: { argb: "FFFFFFFF" } };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: INK } };
-    cell.alignment = {
-      vertical: "middle",
-      horizontal: col.type === "money" || col.type === "int" ? "right" : "left",
-    };
+    cell.alignment = { vertical: "middle", horizontal: right ? "right" : "left" };
     cell.border = { bottom: { style: "thin", color: { argb: GOLD } } };
-    ws.getColumn(i + 1).width = col.width ?? 16;
+  };
+  if (imgCol) {
+    styleHeaderCell(header.getCell(1), "Photo", false);
+    ws.getColumn(1).width = 8;
+  }
+  def.columns.forEach((col, i) => {
+    styleHeaderCell(header.getCell(i + 1 + imgCol), col.header, col.type === "money" || col.type === "int");
+    ws.getColumn(i + 1 + imgCol).width = col.width ?? 16;
   });
   header.height = 20;
 
   // Data rows
   rows.forEach((r, ri) => {
-    const row = ws.getRow(6 + ri);
+    const rowNum = 6 + ri;
+    const row = ws.getRow(rowNum);
+    if (imgCol) {
+      const cell = row.getCell(1);
+      cell.border = { bottom: { style: "hair", color: { argb: RULE } } };
+      if (ri % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: ZEBRA } };
+      // Embed the thumbnail floating over the photo cell.
+      const img = typeof r.image === "string" ? r.image : "";
+      const m = img.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
+      if (m) {
+        const ext = (m[1] === "jpg" ? "jpeg" : m[1]) as "jpeg" | "png" | "gif";
+        try {
+          const id = wb.addImage({ base64: m[2], extension: ext });
+          ws.addImage(id, {
+            tl: { col: 0.12, row: rowNum - 1 + 0.08 } as ExcelJS.Anchor,
+            ext: { width: 34, height: 34 },
+            editAs: "oneCell",
+          });
+        } catch {
+          /* an unreadable image just leaves the cell blank */
+        }
+      }
+    }
     def.columns.forEach((col, ci) => {
-      const cell = row.getCell(ci + 1);
+      const cell = row.getCell(ci + 1 + imgCol);
       const v = cellValue(r, col);
       if (col.type === "date" || col.type === "datetime") {
         cell.value = toDate(v);
@@ -151,7 +179,7 @@ export async function GET(req: NextRequest) {
       cell.border = { bottom: { style: "hair", color: { argb: RULE } } };
       if (ri % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: ZEBRA } };
     });
-    row.height = 16.5;
+    row.height = imgCol ? 28 : 16.5;
   });
 
   // Totals row
@@ -159,22 +187,27 @@ export async function GET(req: NextRequest) {
   if (rows.length && totalCols.length) {
     const rowIdx = 6 + rows.length;
     const row = ws.getRow(rowIdx);
-    def.columns.forEach((col, ci) => {
-      const cell = row.getCell(ci + 1);
-      if (ci === 0) cell.value = "TOTAL";
-      else if (col.total) {
-        const L = colLetter(ci + 1);
-        cell.value = { formula: `SUM(${L}6:${L}${rowIdx - 1})` };
-        cell.numFmt = col.type === "money" ? MONEY_FMT : INT_FMT;
-      }
+    const styleTotalCell = (cell: ExcelJS.Cell) => {
       cell.font = { name: "Calibri", size: 10.5, bold: true, color: { argb: INK } };
       cell.border = { top: { style: "medium", color: { argb: GOLD } } };
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2ECD9" } };
+    };
+    if (imgCol) styleTotalCell(row.getCell(1)); // keep the photo column styled
+    def.columns.forEach((col, ci) => {
+      const cell = row.getCell(ci + 1 + imgCol);
+      if (ci === 0) cell.value = "TOTAL";
+      else if (col.total) {
+        const L = colLetter(ci + 1 + imgCol);
+        cell.value = { formula: `SUM(${L}6:${L}${rowIdx - 1})` };
+        cell.numFmt = col.type === "money" ? MONEY_FMT : INT_FMT;
+      }
+      styleTotalCell(cell);
     });
     row.height = 19;
   }
 
-  ws.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: lastCol } };
+  // Filter the data columns only (skip the non-sortable Photo column).
+  ws.autoFilter = { from: { row: 5, column: 1 + imgCol }, to: { row: 5, column: lastCol } };
 
   const buf = await wb.xlsx.writeBuffer();
   return new NextResponse(buf as ArrayBuffer, {

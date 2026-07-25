@@ -73,6 +73,7 @@ export default function PrintReportPage({ params }: { params: { section: string 
           <table className="w-full mt-5 border-collapse text-[11.5px]">
             <thead>
               <tr>
+                {def.thumbnail && <th className="bg-[#1a1a1a] text-white font-semibold px-2.5 py-2 border-b-2 border-[#D4AF37] text-left w-[46px]">Photo</th>}
                 {def.columns.map((c) => (
                   <th
                     key={c.key}
@@ -86,6 +87,16 @@ export default function PrintReportPage({ params }: { params: { section: string 
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className={i % 2 ? "bg-[#faf8f2]" : ""}>
+                  {def.thumbnail && (
+                    <td className="px-2.5 py-1.5 border-b border-[#e6e1d2] align-top">
+                      {typeof r.image === "string" && r.image.startsWith("data:image/") ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={r.image} alt="" className="w-9 h-9 object-cover rounded border border-[#ddd6c4]" />
+                      ) : (
+                        <span className="inline-block w-9 h-9 rounded border border-[#e6e1d2] bg-[#f3f1ea]" />
+                      )}
+                    </td>
+                  )}
                   {def.columns.map((c) => (
                     <td
                       key={c.key}
@@ -100,6 +111,7 @@ export default function PrintReportPage({ params }: { params: { section: string 
             {hasTotals && (
               <tfoot>
                 <tr>
+                  {def.thumbnail && <td className="px-2.5 py-2 bg-[#f2ecd9] border-t-2 border-[#D4AF37]" />}
                   {def.columns.map((c, i) => (
                     <td
                       key={c.key}

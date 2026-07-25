@@ -22,6 +22,9 @@ export interface ReportDef {
   moduleKey: string; // access is checked against this module
   columns: ReportColumn[];
   rows: () => Record<string, unknown>[];
+  /** When true, each row's `image` field (a data URL) is shown as a thumbnail
+   *  in the printed PDF and the Excel export. */
+  thumbnail?: boolean;
 }
 
 const q = (sql: string, ...args: unknown[]) =>
@@ -31,6 +34,7 @@ export const REPORTS: Record<string, ReportDef> = {
   inventory: {
     title: "Inventory",
     moduleKey: "inventory",
+    thumbnail: true,
     columns: [
       { key: "sku", header: "SKU", width: 14 },
       { key: "name", header: "Product", width: 38 },
@@ -47,13 +51,14 @@ export const REPORTS: Record<string, ReportDef> = {
     ],
     rows: () =>
       q(`SELECT sku, name, game, category, set_name, rarity, condition, grade,
-                stock, cost, price, (cost * stock) stock_value
+                stock, cost, price, (cost * stock) stock_value, image
          FROM products WHERE active = 1 ORDER BY name`),
   },
 
   singles: {
     title: "Singles",
     moduleKey: "singles",
+    thumbnail: true,
     columns: [
       { key: "sku", header: "SKU", width: 14 },
       { key: "name", header: "Card", width: 38 },
@@ -68,13 +73,14 @@ export const REPORTS: Record<string, ReportDef> = {
     ],
     rows: () =>
       q(`SELECT sku, name, game, set_name, rarity, condition, stock, cost, price,
-                (cost * stock) stock_value
+                (cost * stock) stock_value, image
          FROM products WHERE active = 1 AND category = 'single' ORDER BY name`),
   },
 
   graded: {
     title: "Graded Cards",
     moduleKey: "graded",
+    thumbnail: true,
     columns: [
       { key: "sku", header: "SKU", width: 14 },
       { key: "name", header: "Card", width: 36 },
@@ -88,7 +94,7 @@ export const REPORTS: Record<string, ReportDef> = {
       { key: "price", header: "Price", type: "money", width: 12, total: true },
     ],
     rows: () =>
-      q(`SELECT sku, name, game, set_name, grade_company, grade, cert_number, stock, cost, price
+      q(`SELECT sku, name, game, set_name, grade_company, grade, cert_number, stock, cost, price, image
          FROM products WHERE active = 1 AND category = 'graded' ORDER BY name`),
   },
 
@@ -163,6 +169,7 @@ export const REPORTS: Record<string, ReportDef> = {
   preorders: {
     title: "Preorders",
     moduleKey: "preorders",
+    thumbnail: true,
     columns: [
       { key: "number", header: "Preorder", width: 14 },
       { key: "created_at", header: "Taken", type: "datetime", width: 18 },
@@ -181,7 +188,7 @@ export const REPORTS: Record<string, ReportDef> = {
       q(`SELECT po.number, po.created_at, c.name customer, po.product_name, po.game,
                 po.qty, po.unit_price, (po.unit_price * po.qty) order_total, po.deposit,
                 MAX(0, po.unit_price * po.qty - po.deposit) balance,
-                po.status, po.expected_date
+                po.status, po.expected_date, po.image
          FROM preorders po
          LEFT JOIN customers c ON c.id = po.customer_id
          ORDER BY po.id DESC`),

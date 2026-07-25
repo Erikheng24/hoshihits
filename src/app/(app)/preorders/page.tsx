@@ -7,6 +7,7 @@ import { PageHeader, StatusBadge, StatCard, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { SearchToolbar } from "@/components/SearchToolbar";
 import { GAMES } from "@/components/InventoryView";
+import { PreorderPhotoField } from "@/components/PreorderPhotoField";
 import { createPreorderAction, advancePreorderAction, cancelPreorderAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -105,8 +106,16 @@ export default function PreordersPage({ searchParams }: { searchParams: { q?: st
                     {p.customer_phone && <span className="block text-[11px] text-fog num">{p.customer_phone}</span>}
                   </td>
                   <td className="text-mist">
-                    {p.product_name}
-                    {p.game && <span className="block text-[11px] text-fog">{p.game}</span>}
+                    <div className="flex items-center gap-2.5">
+                      {p.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.image} alt="" className="w-8 h-8 rounded object-cover border border-edge shrink-0" />
+                      )}
+                      <span>
+                        {p.product_name}
+                        {p.game && <span className="block text-[11px] text-fog">{p.game}</span>}
+                      </span>
+                    </div>
                   </td>
                   <td className="num text-center text-mist">{p.qty}</td>
                   <td className="num text-right text-white">{money(total)}</td>
@@ -166,6 +175,7 @@ export default function PreordersPage({ searchParams }: { searchParams: { q?: st
               <label className="field"><span>Qty</span><input name="qty" type="number" min="1" defaultValue={1} className="input num" /></label>
               <label className="field"><span>Unit price ($) *</span><input name="unit_price" type="number" step="0.01" min="0.01" required className="input num" /></label>
               <label className="field"><span>Deposit ($)</span><input name="deposit" type="number" step="0.01" min="0" className="input num" /></label>
+              <PreorderPhotoField />
               <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
                 <Link href="/preorders" className="btn-ghost px-4 py-2 text-sm">Cancel</Link>
                 <button className="btn-gold px-5 py-2 text-sm">Create preorder</button>

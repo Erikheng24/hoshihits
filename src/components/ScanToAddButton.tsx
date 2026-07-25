@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "./icons";
 import { UnifiedScanner } from "./UnifiedScanner";
+import type { AiUsageLike } from "./AiBattery";
 import type { ItemKind, EnrichResult } from "@/lib/scan";
 import type { QuickAddInput, PhotoIdResult } from "@/app/(app)/inventory/enrich";
 
@@ -17,7 +18,7 @@ export function ScanToAddButton({
   quickAdd: (input: QuickAddInput) => Promise<{ ok: boolean; error?: string; id?: number; sku?: string }>;
   identify: (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
   games: string[];
-  initialUsage?: { used: number; limit: number };
+  initialUsage?: AiUsageLike;
 }) {
   const [open, setOpen] = useState(false);
   return (

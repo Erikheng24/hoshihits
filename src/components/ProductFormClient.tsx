@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Icon } from "./icons";
 import { ScanCapture } from "./ScanCapture";
+import type { AiUsageLike } from "./AiBattery";
 import { fileToDataUrl } from "@/lib/image-client";
 import type { ScanFields, ScanMode } from "@/lib/scan";
 import type { PhotoIdResult } from "@/app/(app)/inventory/enrich";
@@ -35,7 +36,7 @@ export function ProductFormClient({
   editingId?: number;
   action: (formData: FormData) => void | Promise<void>;
   identify: (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
-  initialUsage?: { used: number; limit: number };
+  initialUsage?: AiUsageLike;
 }) {
   const [scanOpen, setScanOpen] = useState(false);
   const [image, setImage] = useState<string | null>(product.image ?? null);

@@ -29,7 +29,8 @@ export interface PhotoIdResult extends EnrichResult {
   identified: boolean;
   game?: string;
   kind?: ItemKind;
-  usage?: AiUsage; // today's AI scan count + daily limit
+  provider?: string; // which AI answered (gemini / groq)
+  usage?: AiUsage; // today's per-provider AI scan counts + daily limits
 }
 
 /**
@@ -47,18 +48,17 @@ export async function identifyPhotoAction(dataUrl: string, gameHint?: string): P
     return { ok: vid.ok, identified: false, source: "none", message: vid.message, fields: {}, usage };
   }
 
-  const noun = vid.kind === "graded" ? "slab" : vid.kind === "sealed" ? "box" : "card";
-  const lang = vid.language ? vid.language : "";
   return {
     ok: true,
     identified: true,
     game: vid.game || gameHint,
     kind: vid.kind,
+    provider: vid.provider,
     source: "none",
     // name, set_name, rarity, and (for slabs) grade_company / grade / cert_number.
     fields: vid.fields,
     // No stock art — the scanned photo is the product picture (used by the caller).
-    message: `Read from the ${lang ? lang + " " : ""}${noun} — please confirm the details before saving.`,
+    message: vid.message, // "Read from the … by Gemini/Groq — please confirm …"
     usage,
   };
 }

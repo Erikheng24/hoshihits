@@ -16,6 +16,10 @@ export async function createPreorderAction(formData: FormData) {
   const deposit = Math.round((parseFloat(String(formData.get("deposit") ?? "0")) || 0) * 100);
   const expected = String(formData.get("expected_date") ?? "").trim() || null;
 
+  // Optional reference photo of the ordered box/card (data URL from the picker).
+  const rawImage = String(formData.get("image") ?? "");
+  const image = rawImage.startsWith("data:image/") && rawImage.length < 1_400_000 ? rawImage : null;
+
   if (!customerId) throw new Error("Customer is required.");
   if (!productName) throw new Error("Product name is required.");
   if (unitPrice <= 0) throw new Error("Unit price must be positive.");
@@ -24,10 +28,10 @@ export async function createPreorderAction(formData: FormData) {
   const number = nextNumber("PRE", "preorders", 4);
   const r = db
     .prepare(
-      `INSERT INTO preorders (number, customer_id, product_id, product_name, game, qty, unit_price, deposit, status, expected_date, user_id, created_at)
-       VALUES (?,?,NULL,?,?,?,?,?, 'pending', ?, ?, ?)`
+      `INSERT INTO preorders (number, customer_id, product_id, product_name, game, qty, unit_price, deposit, status, expected_date, image, user_id, created_at)
+       VALUES (?,?,NULL,?,?,?,?,?, 'pending', ?, ?, ?, ?)`
     )
-    .run(number, customerId, productName, game, qty, unitPrice, deposit, expected, user.id, ts());
+    .run(number, customerId, productName, game, qty, unitPrice, deposit, expected, image, user.id, ts());
   audit(user.id, "preorders.create", "preorder", Number(r.lastInsertRowid), `${number} — ${productName}`);
   revalidatePath("/preorders");
   redirect("/preorders");

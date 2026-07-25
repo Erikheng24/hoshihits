@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS preorders (
   deposit INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','arrived','ready','collected','cancelled')),
   expected_date TEXT,
+  image TEXT,                      -- reference photo of the ordered box/card
   user_id INTEGER REFERENCES users(id),
   created_at TEXT NOT NULL
 );
@@ -214,8 +215,10 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 CREATE TABLE IF NOT EXISTS ai_usage (
-  day TEXT PRIMARY KEY,   -- YYYY-MM-DD (local)
-  count INTEGER NOT NULL DEFAULT 0
+  day TEXT NOT NULL,               -- YYYY-MM-DD (local)
+  provider TEXT NOT NULL DEFAULT 'gemini',
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (day, provider)
 );
 `;
 
@@ -244,6 +247,13 @@ function migrate(db: DbConn) {
   if (!productCols.includes("image")) db.exec(`ALTER TABLE products ADD COLUMN image TEXT`);
   if (!productCols.includes("notes")) db.exec(`ALTER TABLE products ADD COLUMN notes TEXT`);
   if (!productCols.includes("market_price")) db.exec(`ALTER TABLE products ADD COLUMN market_price INTEGER`);
+  // Preorders can now carry a reference photo of the box/card the customer ordered.
+  if (!cols("preorders").includes("image")) db.exec(`ALTER TABLE preorders ADD COLUMN image TEXT`);
+  // AI usage is tracked per provider (Gemini, Groq…). Older DBs had a single
+  // per-day counter; give those rows a provider so the battery meters work.
+  if (!cols("ai_usage").includes("provider")) {
+    db.exec(`ALTER TABLE ai_usage ADD COLUMN provider TEXT NOT NULL DEFAULT 'gemini'`);
+  }
 }
 
 export function getDb(): DbConn {
@@ -372,22 +382,73 @@ export function audit(userId: number | null, action: string, entity?: string, en
     .run(userId, action, entity ?? null, entityId ?? null, details ?? null, ts());
 }
 
-export interface AiUsage { used: number; limit: number }
-
-/** Count one AI photo scan against today's quota. */
-export function recordAiScan(): void {
-  getDb()
-    .prepare("INSERT INTO ai_usage (day, count) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET count = count + 1")
-    .run(today());
+/** One AI provider's daily usage: today's count and its free-tier daily limit. */
+export interface ProviderUsage {
+  id: string;
+  label: string;
+  used: number;
+  limit: number;
+  configured: boolean; // an API key is set, so this provider actually runs
+}
+export interface AiUsage {
+  providers: ProviderUsage[];
+  // Combined figures kept for older call sites / simple displays.
+  used: number;
+  limit: number;
 }
 
-/** Today's AI scan count and the configured daily limit (resets each day). */
+/**
+ * The AI providers the scanner can use, in fallback order. `envKey` decides
+ * whether the provider is configured; `limitEnv` overrides its free-tier daily
+ * limit. Labels appear in the battery meters and the "read by …" message.
+ */
+export const AI_PROVIDERS: { id: string; label: string; envKey: string; limitEnv: string; defaultLimit: number }[] = [
+  { id: "gemini", label: "Gemini", envKey: "GEMINI_API_KEY", limitEnv: "GEMINI_DAILY_LIMIT", defaultLimit: 200 },
+  { id: "groq", label: "Groq", envKey: "GROQ_API_KEY", limitEnv: "GROQ_DAILY_LIMIT", defaultLimit: 1000 },
+];
+
+/** Count one AI photo scan against today's quota for a given provider. */
+export function recordAiScan(provider = "gemini"): void {
+  getDb()
+    .prepare(
+      "INSERT INTO ai_usage (day, provider, count) VALUES (?, ?, 1) ON CONFLICT(day, provider) DO UPDATE SET count = count + 1"
+    )
+    .run(today(), provider);
+}
+
+/** Today's per-provider AI scan counts and daily limits (reset each day). */
 export function getAiUsage(): AiUsage {
   const db = getDb();
-  const row = db.prepare("SELECT count FROM ai_usage WHERE day = ?").get(today()) as { count: number } | undefined;
-  const setting = db.prepare("SELECT value FROM settings WHERE key = 'ai_daily_limit'").get() as { value: string } | undefined;
-  const limit = Math.max(1, Number(setting?.value) || Number(process.env.GEMINI_DAILY_LIMIT) || 200);
-  return { used: row?.count ?? 0, limit };
+  const rows = db.prepare("SELECT provider, count FROM ai_usage WHERE day = ?").all(today()) as {
+    provider: string;
+    count: number;
+  }[];
+  const byProvider = new Map(rows.map((r) => [r.provider, r.count]));
+
+  // A configurable override for Gemini's limit kept from the earlier single-provider setting.
+  const legacySetting = db.prepare("SELECT value FROM settings WHERE key = 'ai_daily_limit'").get() as
+    | { value: string }
+    | undefined;
+
+  const providers: ProviderUsage[] = AI_PROVIDERS.map((p) => {
+    const override = p.id === "gemini" ? Number(legacySetting?.value) : 0;
+    const limit = Math.max(1, override || Number(process.env[p.limitEnv]) || p.defaultLimit);
+    return {
+      id: p.id,
+      label: p.label,
+      used: byProvider.get(p.id) ?? 0,
+      limit,
+      configured: !!process.env[p.envKey],
+    };
+  });
+
+  const active = providers.filter((p) => p.configured);
+  const shown = active.length ? active : providers.slice(0, 1); // always show at least Gemini
+  return {
+    providers: shown,
+    used: shown.reduce((s, p) => s + p.used, 0),
+    limit: shown.reduce((s, p) => s + p.limit, 0),
+  };
 }
 
 let counterStmtReady = false;
