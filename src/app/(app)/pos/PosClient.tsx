@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { money } from "@/lib/format";
-import { checkoutAction, startKhqrPaymentAction, pollKhqrPaymentAction, cancelKhqrPaymentAction, type CheckoutResult } from "./actions";
+import { checkoutAction, startKhqrPaymentAction, startCardPaymentAction, pollKhqrPaymentAction, cancelKhqrPaymentAction, type CheckoutResult } from "./actions";
 
 interface Product {
   id: number; sku: string; barcode: string | null; name: string; game: string;
@@ -24,7 +24,7 @@ const CATS = [
   { key: "accessory", label: "Accessories" },
 ];
 
-export function PosClient({ products, customers, games }: { products: Product[]; customers: Customer[]; games: string[] }) {
+export function PosClient({ products, customers, games, cardGateway = false }: { products: Product[]; customers: Customer[]; games: string[]; cardGateway?: boolean }) {
   const [q, setQ] = useState("");
   const [game, setGame] = useState("");
   const [cat, setCat] = useState("");
@@ -38,9 +38,9 @@ export function PosClient({ products, customers, games }: { products: Product[];
   const [error, setError] = useState<string | null>(null);
   const [cartOpenMobile, setCartOpenMobile] = useState(false);
   const [pending, startTransition] = useTransition();
-  // Active KHQR payment: the QR is shown to the customer while we wait for Bakong.
-  const [khqr, setKhqr] = useState<{ paymentId: number; image: string; amount: number; ref: string } | null>(null);
-  const [khqrError, setKhqrError] = useState<string | null>(null);
+  // Active online payment (QR shown to the customer, or a card checkout in progress).
+  const [pay, setPay] = useState<{ paymentId: number; channel: string; image?: string; checkoutUrl?: string; amount: number; ref: string } | null>(null);
+  const [payError, setPayError] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -122,56 +122,73 @@ export function PosClient({ products, customers, games }: { products: Product[];
     });
   }
 
-  // ---- KHQR: show the QR, wait for Bakong to confirm, then auto-open the receipt ----
+  // ---- Online payment: show QR / open card page, wait for the gateway, then auto-open the receipt ----
+  const cartPayload = () => ({
+    lines: lines.map((l) => ({ productId: l.product.id, qty: l.qty })),
+    customerId,
+    discountCents: discount,
+    method: method as "cash" | "card" | "qr",
+    amountPaidCents: total,
+  });
+
   function startQr() {
     setError(null);
-    setKhqrError(null);
+    setPayError(null);
     startTransition(async () => {
-      const res = await startKhqrPaymentAction({
-        lines: lines.map((l) => ({ productId: l.product.id, qty: l.qty })),
-        customerId,
-        discountCents: discount,
-        method: "qr",
-        amountPaidCents: total,
-      });
+      const res = await startKhqrPaymentAction(cartPayload());
       if (!res.ok || !res.paymentId || !res.image) {
         setError(res.error ?? "Couldn't start the QR payment.");
         return;
       }
-      setKhqr({ paymentId: res.paymentId, image: res.image, amount: res.amount ?? total, ref: res.ref ?? "" });
+      setPay({ paymentId: res.paymentId, channel: "qr", image: res.image, amount: res.amount ?? total, ref: res.ref ?? "" });
     });
   }
 
-  async function cancelQr() {
-    if (khqr) await cancelKhqrPaymentAction(khqr.paymentId);
-    setKhqr(null);
-    setKhqrError(null);
+  function startCard() {
+    setError(null);
+    setPayError(null);
+    startTransition(async () => {
+      const res = await startCardPaymentAction(cartPayload());
+      if (!res.ok || !res.paymentId || !res.checkoutUrl) {
+        setError(res.error ?? "Couldn't start the card payment.");
+        return;
+      }
+      // Open ABA's secure card page for the customer, then wait for approval.
+      window.open(res.checkoutUrl, "_blank", "noopener");
+      setPay({ paymentId: res.paymentId, channel: "card", checkoutUrl: res.checkoutUrl, amount: res.amount ?? total, ref: res.ref ?? "" });
+    });
   }
 
-  // Poll the active KHQR payment ~every 2s until it's paid, cancelled or expires.
+  async function cancelPay() {
+    if (pay) await cancelKhqrPaymentAction(pay.paymentId);
+    setPay(null);
+    setPayError(null);
+  }
+
+  // Poll the active payment ~every 2s until it's paid, cancelled or expires.
   useEffect(() => {
-    if (!khqr) return;
+    if (!pay) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
-      const r = await pollKhqrPaymentAction(khqr.paymentId).catch(() => null);
+      const r = await pollKhqrPaymentAction(pay.paymentId).catch(() => null);
       if (!alive) return;
       if (r?.status === "paid" && r.saleId) {
         // Sale committed — jump to the receipt, which auto-prints and saves a PDF.
         setLines([]);
         setDiscount(0);
         setCustomerId(null);
-        setKhqr(null);
+        setPay(null);
         router.push(`/pos/receipt/${r.saleId}?autoprint=1`);
         return;
       }
       if (r?.status === "expired") {
-        setKhqrError("The QR expired before payment — start again.");
-        setKhqr(null);
+        setPayError("The payment expired before it completed — start again.");
+        setPay(null);
         return;
       }
       if (r?.status === "error") {
-        setKhqrError(r.message ?? "Couldn't check payment. Retrying…");
+        setPayError(r.message ?? "Couldn't check payment. Retrying…");
       }
       timer = setTimeout(poll, 2200);
     };
@@ -180,7 +197,7 @@ export function PosClient({ products, customers, games }: { products: Product[];
       alive = false;
       clearTimeout(timer);
     };
-  }, [khqr, router]);
+  }, [pay, router]);
 
   // ---- success screen ----
   if (result) {
@@ -421,11 +438,11 @@ export function PosClient({ products, customers, games }: { products: Product[];
       {/* ---- Payment modal ---- */}
       {payOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/75 animate-fadein" onClick={() => !pending && !khqr && setPayOpen(false)} />
+          <div className="absolute inset-0 bg-black/75 animate-fadein" onClick={() => !pending && !pay && setPayOpen(false)} />
           <div className="relative card shadow-pop w-full max-w-md p-6 animate-rise">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display text-lg tracking-wide text-white">Payment</h2>
-              <button onClick={() => setPayOpen(false)} className="text-fog hover:text-white disabled:opacity-40" disabled={pending || !!khqr}>
+              <button onClick={() => setPayOpen(false)} className="text-fog hover:text-white disabled:opacity-40" disabled={pending || !!pay}>
                 <Icon name="x" className="w-5 h-5" />
               </button>
             </div>
@@ -435,21 +452,36 @@ export function PosClient({ products, customers, games }: { products: Product[];
               <span className="num text-4xl font-semibold text-gold-soft">{money(total)}</span>
             </p>
 
-            {khqr ? (
+            {pay ? (
               <div className="flex flex-col items-center animate-rise">
-                <div className="bg-white p-3 rounded-xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={khqr.image} alt="KHQR" className="w-52 h-52" />
-                </div>
+                {pay.channel === "qr" && pay.image ? (
+                  <>
+                    <div className="bg-white p-3 rounded-xl">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={pay.image} alt="QR" className="w-52 h-52" />
+                    </div>
+                    <p className="text-fog text-[12px] mt-3 text-center">
+                      Customer scans on the display screen with any bank app (ABA, ACLEDA, Wing…).
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 rounded-full bg-gold/10 border border-gold/30 grid place-items-center">
+                      <Icon name="money" className="w-7 h-7 text-gold-soft" />
+                    </div>
+                    <p className="text-fog text-[12px] mt-3 text-center">
+                      The card page opened in a new tab. If it didn&apos;t, {" "}
+                      <a href={pay.checkoutUrl} target="_blank" rel="noopener" className="text-gold-dim underline">open it here</a>.
+                    </p>
+                  </>
+                )}
                 <p className="text-white text-sm mt-4 font-medium flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-jade animate-pulse" /> Waiting for customer to pay…
+                  <span className="w-2 h-2 rounded-full bg-jade animate-pulse" /> Waiting for payment…
                 </p>
-                <p className="text-fog text-[12px] mt-1 text-center">
-                  Customer scans on the display screen with any bank app (ABA, ACLEDA, Wing…). It prints automatically once paid.
-                </p>
-                {khqr.ref && <p className="text-fog text-[11px] mt-2 num">Ref {khqr.ref}</p>}
-                {khqrError && <p className="text-amberish text-[12px] mt-3 text-center">{khqrError}</p>}
-                <button onClick={cancelQr} className="btn-ghost px-4 py-2 text-sm mt-5 text-ruby/80 hover:text-ruby">
+                <p className="text-fog text-[12px] mt-1 text-center">Prints automatically once paid.</p>
+                {pay.ref && <p className="text-fog text-[11px] mt-2 num">Ref {pay.ref}</p>}
+                {payError && <p className="text-amberish text-[12px] mt-3 text-center">{payError}</p>}
+                <button onClick={cancelPay} className="btn-ghost px-4 py-2 text-sm mt-5 text-ruby/80 hover:text-ruby">
                   Cancel payment
                 </button>
               </div>
@@ -496,20 +528,30 @@ export function PosClient({ products, customers, games }: { products: Product[];
               </div>
             )}
             {method === "card" && (
-              <p className="text-[13px] text-fog mb-4">Process {money(total)} on the card terminal, then confirm.</p>
+              <p className="text-[13px] text-fog mb-4">
+                {cardGateway
+                  ? `Charge ${money(total)} to a card through ABA PayWay — opens ABA's secure page and prints automatically once approved.`
+                  : `Process ${money(total)} on the card terminal, then confirm.`}
+              </p>
             )}
             {method === "qr" && (
-              <p className="text-[13px] text-fog mb-4">Show a KHQR — the customer scans it on the display screen and it prints automatically once paid.</p>
+              <p className="text-[13px] text-fog mb-4">Show a QR — the customer scans it on the display screen and it prints automatically once paid.</p>
             )}
 
             {error && <p className="text-ruby text-[12px] bg-ruby/10 border border-ruby/25 rounded-lg px-3 py-2 mb-3">{error}</p>}
 
             <button
-              onClick={method === "qr" ? startQr : submit}
+              onClick={method === "qr" ? startQr : method === "card" && cardGateway ? startCard : submit}
               disabled={pending || (method === "cash" && tenderedCents < total)}
               className="btn-gold w-full py-3 disabled:opacity-50"
             >
-              {pending ? "Please wait…" : method === "qr" ? "Show KHQR to customer" : "Confirm payment"}
+              {pending
+                ? "Please wait…"
+                : method === "qr"
+                ? "Show QR to customer"
+                : method === "card" && cardGateway
+                ? "Charge card (ABA PayWay)"
+                : "Confirm payment"}
             </button>
             </>
             )}

@@ -23,11 +23,19 @@ export async function checkoutAction(input: CheckoutInput): Promise<CheckoutResu
   return result;
 }
 
-/** Start a KHQR payment: generates the QR and opens a pending payment. */
+/** Start a QR payment (Bakong KHQR or ABA PayWay QR, per settings). */
 export async function startKhqrPaymentAction(input: CheckoutInput): Promise<StartPaymentResult> {
   const user = requireModule("pos");
-  const res = await startPayment({ ...input, method: "qr" }, user.id);
-  if (res.ok) audit(user.id, "pos.khqr_start", "payment", res.paymentId, `${res.ref} — ${(res.amount ?? 0) / 100} USD`);
+  const res = await startPayment({ ...input, method: "qr" }, user.id, "qr");
+  if (res.ok) audit(user.id, "pos.qr_start", "payment", res.paymentId, `${res.provider} ${res.ref} — ${(res.amount ?? 0) / 100} USD`);
+  return res;
+}
+
+/** Start an ABA PayWay card payment: opens the hosted checkout. */
+export async function startCardPaymentAction(input: CheckoutInput): Promise<StartPaymentResult> {
+  const user = requireModule("pos");
+  const res = await startPayment({ ...input, method: "card" }, user.id, "card");
+  if (res.ok) audit(user.id, "pos.card_start", "payment", res.paymentId, `payway ${res.ref} — ${(res.amount ?? 0) / 100} USD`);
   return res;
 }
 

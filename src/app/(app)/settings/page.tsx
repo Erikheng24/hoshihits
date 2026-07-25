@@ -82,6 +82,44 @@ export default function SettingsPage() {
         </form>
       </Card>
 
+      <Card title="ABA PayWay (cards + QR)" className="p-5 mb-4">
+        <p className="text-[12px] text-fog mb-4">
+          Accept Visa/Mastercard and ABA Pay/KHQR through your ABA PayWay merchant account (settled to ABA with its dashboard).
+          Enter the merchant ID and API key ABA gave you. Keep <span className="num text-mist">Sandbox</span> while testing, then switch to Live.
+        </p>
+        <form action={saveSettingsAction} className="grid sm:grid-cols-2 gap-4">
+          <label className="field"><span>Merchant ID</span>
+            <input name="payway_merchant_id" className="input num" defaultValue={settings.payway_merchant_id ?? ""} placeholder="ABA merchant ID" />
+          </label>
+          <label className="field"><span>API key (secret)</span>
+            <input name="payway_api_key" className="input num" defaultValue={settings.payway_api_key ?? ""} placeholder="ABA PayWay API key" />
+          </label>
+          <label className="field"><span>Environment</span>
+            <select name="payway_sandbox" className="input" defaultValue={settings.payway_sandbox ?? "1"}>
+              <option value="1">Sandbox (testing)</option>
+              <option value="0">Live (real payments)</option>
+            </select>
+          </label>
+          <label className="field"><span>Use PayWay for QR too?</span>
+            <select name="payway_qr" className="input" defaultValue={settings.payway_qr ?? "0"}>
+              <option value="0">No — QR uses Bakong directly</option>
+              <option value="1">Yes — route QR through PayWay</option>
+            </select>
+          </label>
+          <label className="field sm:col-span-2"><span>Public site URL (for card redirects)</span>
+            <input name="app_base_url" className="input num" defaultValue={settings.app_base_url ?? ""} placeholder="https://hoshihits.onrender.com" />
+          </label>
+          <div className="sm:col-span-2 flex items-center justify-between gap-3">
+            <Badge tone={settings.payway_merchant_id && settings.payway_api_key ? (settings.payway_sandbox === "0" ? "green" : "amber") : "gray"}>
+              {settings.payway_merchant_id && settings.payway_api_key
+                ? settings.payway_sandbox === "0" ? "LIVE — cards on" : "SANDBOX — testing"
+                : "Not set up"}
+            </Badge>
+            <button className="btn-gold px-5 py-2 text-sm">Save PayWay settings</button>
+          </div>
+        </form>
+      </Card>
+
       <div className="grid lg:grid-cols-2 gap-4">
         <Card title="Store Profile" className="p-5">
           <form action={saveSettingsAction} className="space-y-4">

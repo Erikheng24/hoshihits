@@ -13,6 +13,8 @@ const KEYS = [
   "ai_daily_limit",
   // KHQR payment (Bakong)
   "khqr_account_id", "khqr_merchant_name", "khqr_city", "khqr_phone", "bakong_api_token",
+  // ABA PayWay gateway
+  "payway_merchant_id", "payway_api_key", "payway_sandbox", "payway_qr", "app_base_url",
 ];
 // Checkboxes: absent from the form data means "off", so they need explicit handling.
 const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_phone", "receipt_show_staff"];

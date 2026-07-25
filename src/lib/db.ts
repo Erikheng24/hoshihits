@@ -225,10 +225,12 @@ CREATE TABLE IF NOT EXISTS ai_usage (
 -- QR, and Bakong is polled until it is paid — then the sale is committed.
 CREATE TABLE IF NOT EXISTS payments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ref TEXT NOT NULL,               -- short reference printed on the QR (bill number)
-  md5 TEXT NOT NULL,               -- KHQR md5, used to check payment status at Bakong
-  qr TEXT NOT NULL,                -- the raw KHQR string
-  image TEXT NOT NULL,             -- QR as a data URL, shown on the customer display
+  provider TEXT NOT NULL DEFAULT 'bakong', -- 'bakong' (direct KHQR) or 'payway' (ABA gateway)
+  channel TEXT NOT NULL DEFAULT 'qr',      -- 'qr' or 'card'
+  ref TEXT NOT NULL,               -- bill number / PayWay tran_id
+  md5 TEXT NOT NULL DEFAULT '',     -- KHQR md5 (Bakong), used to check payment status
+  qr TEXT NOT NULL DEFAULT '',      -- the raw KHQR string
+  image TEXT NOT NULL DEFAULT '',   -- QR as a data URL, shown on the customer display
   amount INTEGER NOT NULL,         -- cents
   currency TEXT NOT NULL DEFAULT 'USD',
   status TEXT NOT NULL DEFAULT 'pending',  -- pending | paid | expired | cancelled
@@ -273,6 +275,12 @@ function migrate(db: DbConn) {
   // per-day counter; give those rows a provider so the battery meters work.
   if (!cols("ai_usage").includes("provider")) {
     db.exec(`ALTER TABLE ai_usage ADD COLUMN provider TEXT NOT NULL DEFAULT 'gemini'`);
+  }
+  // Payments gained provider/channel once ABA PayWay was added alongside Bakong.
+  const paymentCols = cols("payments");
+  if (paymentCols.length) {
+    if (!paymentCols.includes("provider")) db.exec(`ALTER TABLE payments ADD COLUMN provider TEXT NOT NULL DEFAULT 'bakong'`);
+    if (!paymentCols.includes("channel")) db.exec(`ALTER TABLE payments ADD COLUMN channel TEXT NOT NULL DEFAULT 'qr'`);
   }
 }
 
