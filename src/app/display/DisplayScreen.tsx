@@ -9,6 +9,7 @@ interface State {
   amount?: number;
   ref?: string;
   status?: string;
+  expiresAt?: number;
 }
 
 const money = (cents = 0) => `$${(cents / 100).toFixed(2)}`;
@@ -19,7 +20,14 @@ const money = (cents = 0) => `$${(cents / 100).toFixed(2)}`;
  */
 export function DisplayScreen({ name, logo, configured }: { name: string; logo: string | null; configured: boolean }) {
   const [state, setState] = useState<State>({ idle: true });
+  const [clock, setClock] = useState(() => Date.now());
   const paidSince = useRef<number | null>(null);
+
+  // 1-second tick so the "valid for m:ss" countdown updates.
+  useEffect(() => {
+    const t = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -92,7 +100,13 @@ export function DisplayScreen({ name, logo, configured }: { name: string; logo: 
           </div>
           <p className="text-white text-lg mt-6 font-medium">Scan to pay with any bank app</p>
           <p className="text-fog text-sm mt-1">ABA · ACLEDA · Wing · Bakong · and more (KHQR)</p>
-          {state.ref && <p className="text-fog text-xs mt-3 num">Ref {state.ref}</p>}
+          {state.expiresAt && (() => {
+            const left = Math.max(0, Math.round((state.expiresAt - clock) / 1000));
+            const mm = Math.floor(left / 60);
+            const ss = String(left % 60).padStart(2, "0");
+            return <p className={`num text-sm mt-3 ${left <= 30 ? "text-ruby" : "text-fog"}`}>{left > 0 ? `Valid for ${mm}:${ss}` : "Expired"}</p>;
+          })()}
+          {state.ref && <p className="text-fog text-xs mt-1 num">Ref {state.ref}</p>}
         </div>
       ) : (
         <div className="flex flex-col items-center">

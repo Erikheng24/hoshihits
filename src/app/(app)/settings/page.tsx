@@ -4,6 +4,7 @@ import { shortDateTime } from "@/lib/format";
 import { PageHeader, Card, Badge } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { LogoUpload } from "@/components/LogoUpload";
+import { KhqrTest } from "@/components/KhqrTest";
 import { getReceiptConfig } from "@/lib/receipt-config";
 import { saveSettingsAction, resetDataAction } from "./actions";
 
@@ -73,13 +74,17 @@ export default function SettingsPage() {
           <label className="field sm:col-span-2"><span>Bakong API token (for auto-detecting payment)</span>
             <input name="bakong_api_token" className="input num" defaultValue={settings.bakong_api_token ?? ""} placeholder="Paste your Bakong Open API token" />
           </label>
-          <div className="sm:col-span-2 flex items-center justify-between gap-3">
+          <div className="sm:col-span-2 flex items-center justify-between gap-3 flex-wrap">
             <Badge tone={settings.khqr_account_id ? (settings.bakong_api_token ? "green" : "amber") : "gray"}>
               {settings.khqr_account_id ? (settings.bakong_api_token ? "READY — auto-detect on" : "QR ready — add token for auto-detect") : "Not set up"}
             </Badge>
             <button className="btn-gold px-5 py-2 text-sm">Save KHQR settings</button>
           </div>
         </form>
+        <div className="mt-4 pt-4 border-t border-edge/70">
+          <KhqrTest />
+          <p className="text-[11px] text-fog mt-2">Generates a sample $0.10 QR to check your settings. Save first, then test. Also links to <a href="/display" target="_blank" className="text-gold-dim hover:text-gold underline">the customer display</a>.</p>
+        </div>
       </Card>
 
       <Card title="ABA PayWay (cards + QR)" className="p-5 mb-4">

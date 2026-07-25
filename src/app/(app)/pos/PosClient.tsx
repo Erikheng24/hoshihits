@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { money } from "@/lib/format";
-import { checkoutAction, startKhqrPaymentAction, startCardPaymentAction, pollKhqrPaymentAction, cancelKhqrPaymentAction, type CheckoutResult } from "./actions";
+import { checkoutAction, startKhqrPaymentAction, startCardPaymentAction, pollKhqrPaymentAction, cancelKhqrPaymentAction, manualCompletePaymentAction, type CheckoutResult } from "./actions";
 
 interface Product {
   id: number; sku: string; barcode: string | null; name: string; game: string;
@@ -39,8 +39,9 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
   const [cartOpenMobile, setCartOpenMobile] = useState(false);
   const [pending, startTransition] = useTransition();
   // Active online payment (QR shown to the customer, or a card checkout in progress).
-  const [pay, setPay] = useState<{ paymentId: number; channel: string; image?: string; checkoutUrl?: string; amount: number; ref: string } | null>(null);
+  const [pay, setPay] = useState<{ paymentId: number; channel: string; image?: string; checkoutUrl?: string; amount: number; ref: string; expiresAt?: number } | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const searchRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -140,7 +141,7 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
         setError(res.error ?? "Couldn't start the QR payment.");
         return;
       }
-      setPay({ paymentId: res.paymentId, channel: "qr", image: res.image, amount: res.amount ?? total, ref: res.ref ?? "" });
+      setPay({ paymentId: res.paymentId, channel: "qr", image: res.image, amount: res.amount ?? total, ref: res.ref ?? "", expiresAt: res.expiresAt });
     });
   }
 
@@ -155,7 +156,7 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
       }
       // Open ABA's secure card page for the customer, then wait for approval.
       window.open(res.checkoutUrl, "_blank", "noopener");
-      setPay({ paymentId: res.paymentId, channel: "card", checkoutUrl: res.checkoutUrl, amount: res.amount ?? total, ref: res.ref ?? "" });
+      setPay({ paymentId: res.paymentId, channel: "card", checkoutUrl: res.checkoutUrl, amount: res.amount ?? total, ref: res.ref ?? "", expiresAt: res.expiresAt });
     });
   }
 
@@ -164,6 +165,32 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
     setPay(null);
     setPayError(null);
   }
+
+  // Fallback: mark the current payment paid by hand (customer clearly paid but
+  // auto-detect is unavailable), then go to the auto-printing receipt.
+  function completeManually() {
+    if (!pay) return;
+    setPayError(null);
+    startTransition(async () => {
+      const r = await manualCompletePaymentAction(pay.paymentId).catch(() => null);
+      if (r?.status === "paid" && r.saleId) {
+        setLines([]);
+        setDiscount(0);
+        setCustomerId(null);
+        setPay(null);
+        router.push(`/pos/receipt/${r.saleId}?autoprint=1`);
+      } else {
+        setPayError(r?.message ?? "Couldn't complete the sale.");
+      }
+    });
+  }
+
+  // 1-second ticker so the countdown updates while a payment is open.
+  useEffect(() => {
+    if (!pay?.expiresAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [pay?.expiresAt]);
 
   // Poll the active payment ~every 2s until it's paid, cancelled or expires.
   useEffect(() => {
@@ -243,6 +270,15 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
               autoFocus
             />
           </div>
+          <a
+            href="/display"
+            target="_blank"
+            rel="noopener"
+            className="btn-ghost px-3 py-2 text-sm shrink-0"
+            title="Open the customer-facing QR screen (for a spare phone)"
+          >
+            <Icon name="pos" className="w-4 h-4" /> <span className="hidden sm:inline">Display</span>
+          </a>
         </div>
 
         <div className="flex gap-1.5 flex-wrap mb-3">
@@ -479,11 +515,22 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
                   <span className="w-2 h-2 rounded-full bg-jade animate-pulse" /> Waiting for payment…
                 </p>
                 <p className="text-fog text-[12px] mt-1 text-center">Prints automatically once paid.</p>
-                {pay.ref && <p className="text-fog text-[11px] mt-2 num">Ref {pay.ref}</p>}
+                {pay.expiresAt && (() => {
+                  const left = Math.max(0, Math.round((pay.expiresAt - now) / 1000));
+                  const mm = Math.floor(left / 60);
+                  const ss = String(left % 60).padStart(2, "0");
+                  return <p className={`text-[12px] mt-2 num ${left <= 30 ? "text-ruby" : "text-fog"}`}>{left > 0 ? `Expires in ${mm}:${ss}` : "Expired — cancel and try again"}</p>;
+                })()}
+                {pay.ref && <p className="text-fog text-[11px] mt-1 num">Ref {pay.ref}</p>}
                 {payError && <p className="text-amberish text-[12px] mt-3 text-center">{payError}</p>}
-                <button onClick={cancelPay} className="btn-ghost px-4 py-2 text-sm mt-5 text-ruby/80 hover:text-ruby">
-                  Cancel payment
-                </button>
+                <div className="flex flex-col items-center gap-2 mt-5">
+                  <button onClick={completeManually} disabled={pending} className="btn-ghost px-4 py-2 text-sm text-jade/90 hover:text-jade disabled:opacity-50">
+                    <Icon name="check" className="w-4 h-4" /> Customer paid — complete manually
+                  </button>
+                  <button onClick={cancelPay} className="text-[12px] text-ruby/70 hover:text-ruby">
+                    Cancel payment
+                  </button>
+                </div>
               </div>
             ) : (
             <>

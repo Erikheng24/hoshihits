@@ -126,8 +126,10 @@ export interface StartPaymentResult {
   checkoutUrl?: string; // hosted-checkout page to open (card channel)
   amount?: number;
   ref?: string;
+  expiresAt?: number;  // epoch ms when the QR/checkout expires
 }
 
+const PAYMENT_TTL_MS = 6 * 60 * 1000;
 const itemName = (input: CheckoutInput) => (input.lines.length === 1 ? "Sale item" : `${input.lines.length} items`);
 
 function insertPayment(
@@ -141,16 +143,19 @@ function insertPayment(
   input: CheckoutInput,
   customerId: number | null,
   userId: number
-): number {
+): { id: number; expiresAt: number } {
+  // Only one payment can be live at a time, so the customer display never shows
+  // a stale QR — cancel any earlier still-pending one first.
+  db().prepare("UPDATE payments SET status = 'cancelled' WHERE status = 'pending'").run();
   const now = new Date();
-  const expires = new Date(now.getTime() + 6 * 60 * 1000);
+  const expires = new Date(now.getTime() + PAYMENT_TTL_MS);
   const r = db()
     .prepare(
       `INSERT INTO payments (provider, channel, ref, md5, qr, image, amount, currency, status, cart, customer_id, user_id, created_at, expires_at)
        VALUES (?,?,?,?,?,?,?, 'USD', 'pending', ?, ?, ?, ?, ?)`
     )
     .run(provider, channel, ref, md5, qr, image, amount, JSON.stringify(input), customerId, userId, ts(now), ts(expires));
-  return Number(r.lastInsertRowid);
+  return { id: Number(r.lastInsertRowid), expiresAt: expires.getTime() };
 }
 
 /**
@@ -173,9 +178,9 @@ export async function startPayment(input: CheckoutInput, userId: number, channel
   // Card → ABA PayWay hosted checkout.
   if (channel === "card") {
     if (!paywayConfigured()) return { ok: false, error: "Card payments need ABA PayWay — add your merchant ID and API key in Settings." };
-    const id = insertPayment("payway", "card", ref, "", "", "", priced.total, input, priced.customerId, userId);
+    const { id, expiresAt } = insertPayment("payway", "card", ref, "", "", "", priced.total, input, priced.customerId, userId);
     const site = getPaywayConfig().siteUrl;
-    return { ok: true, paymentId: id, provider: "payway", channel: "card", checkoutUrl: `${site}/pay/payway/${id}`, amount: priced.total, ref };
+    return { ok: true, paymentId: id, provider: "payway", channel: "card", checkoutUrl: `${site}/pay/payway/${id}`, amount: priced.total, ref, expiresAt };
   }
 
   // QR via ABA PayWay (settled to the merchant account) when enabled…
@@ -184,15 +189,63 @@ export async function startPayment(input: CheckoutInput, userId: number, channel
     const res = await paywayCreateQr(ref, priced.total, itemName(input));
     if (!res.ok || !res.qrString) return { ok: false, error: res.message ?? "Couldn't create the PayWay QR." };
     const image = await QRCode.toDataURL(res.qrString, { margin: 1, width: 720, errorCorrectionLevel: "M" });
-    const id = insertPayment("payway", "qr", ref, "", res.qrString, image, priced.total, input, priced.customerId, userId);
-    return { ok: true, paymentId: id, provider: "payway", channel: "qr", image, amount: priced.total, ref };
+    const { id, expiresAt } = insertPayment("payway", "qr", ref, "", res.qrString, image, priced.total, input, priced.customerId, userId);
+    return { ok: true, paymentId: id, provider: "payway", channel: "qr", image, amount: priced.total, ref, expiresAt };
   }
 
   // …otherwise a direct Bakong KHQR.
   const qr = await generateKhqr(priced.total, ref);
   if (!qr.ok || !qr.image || !qr.md5 || !qr.qr) return { ok: false, error: qr.message ?? "Couldn't create the QR." };
-  const id = insertPayment("bakong", "qr", ref, qr.md5, qr.qr, qr.image, priced.total, input, priced.customerId, userId);
-  return { ok: true, paymentId: id, provider: "bakong", channel: "qr", image: qr.image, amount: priced.total, ref };
+  const { id, expiresAt } = insertPayment("bakong", "qr", ref, qr.md5, qr.qr, qr.image, priced.total, input, priced.customerId, userId);
+  return { ok: true, paymentId: id, provider: "bakong", channel: "qr", image: qr.image, amount: priced.total, ref, expiresAt };
+}
+
+/**
+ * Manually mark a pending payment as paid and commit the sale — the fallback for
+ * when the customer has clearly paid (shows their success screen) but
+ * auto-detection is unavailable (e.g. no/expired Bakong token, or a network
+ * blip). Guarded so it only ever commits a still-pending payment once.
+ */
+export function manualComplete(id: number, userId: number): PollResult {
+  try {
+    const result = db().transaction(() => {
+      const p = db().prepare("SELECT status, channel, cart FROM payments WHERE id = ?").get(id) as
+        | { status: string; channel: string; cart: string }
+        | undefined;
+      if (!p) throw new Error("Payment not found.");
+      if (p.status === "paid") {
+        const ex = db().prepare("SELECT sale_id FROM payments WHERE id = ?").get(id) as { sale_id: number | null };
+        return { saleId: ex.sale_id ?? 0, number: "", already: true as const };
+      }
+      if (p.status !== "pending") throw new Error("This payment is no longer open.");
+      const input = JSON.parse(p.cart) as CheckoutInput;
+      const method: CheckoutInput["method"] = p.channel === "card" ? "card" : "qr";
+      const sale = commitSale(db(), { ...input, method }, userId, true);
+      db().prepare("UPDATE payments SET status = 'paid', sale_id = ? WHERE id = ?").run(sale.saleId, id);
+      return { saleId: sale.saleId!, number: sale.number!, already: false as const };
+    })();
+    if (result.already) {
+      const s = db().prepare("SELECT number FROM sales WHERE id = ?").get(result.saleId) as { number: string } | undefined;
+      return { status: "paid", saleId: result.saleId, number: s?.number };
+    }
+    return { status: "paid", saleId: result.saleId, number: result.number };
+  } catch (e) {
+    return { status: "error", message: e instanceof Error ? e.message : "Couldn't complete the sale." };
+  }
+}
+
+/** Generate a tiny sample QR to verify KHQR/PayWay config from Settings. */
+export async function testKhqr(): Promise<{ ok: boolean; message: string; image?: string }> {
+  const payway = getPaywayConfig();
+  if (payway.useForQr && paywayConfigured()) {
+    const res = await paywayCreateQr(`TEST${Date.now().toString(36)}`, 10, "Config test");
+    if (!res.ok || !res.qrString) return { ok: false, message: res.message ?? "PayWay QR test failed." };
+    const image = await QRCode.toDataURL(res.qrString, { margin: 1, width: 320 });
+    return { ok: true, message: "ABA PayWay QR generated successfully.", image };
+  }
+  const qr = await generateKhqr(10, `TEST${Date.now().toString(36)}`);
+  if (!qr.ok || !qr.image) return { ok: false, message: qr.message ?? "KHQR test failed." };
+  return { ok: true, message: "Bakong KHQR generated successfully.", image: qr.image };
 }
 
 interface PaymentRow {
@@ -300,6 +353,7 @@ export interface DisplayState {
   ref?: string;
   status?: string;
   number?: string;
+  expiresAt?: number; // epoch ms
 }
 
 /** Snapshot for the customer display (also drives payment detection while showing). */
@@ -311,8 +365,8 @@ export async function getDisplayState(): Promise<DisplayState> {
   let poll: PollResult | null = null;
   if (before?.status === "pending") poll = await pollPayment(id);
 
-  const p = db().prepare("SELECT id, image, amount, ref, status FROM payments WHERE id = ?").get(id) as
-    | { id: number; image: string; amount: number; ref: string; status: string }
+  const p = db().prepare("SELECT id, image, amount, ref, status, expires_at FROM payments WHERE id = ?").get(id) as
+    | { id: number; image: string; amount: number; ref: string; status: string; expires_at: string }
     | undefined;
   if (!p) return { idle: true };
   // Only surface pending (show QR) or freshly paid (show thanks); ignore old expired/cancelled.
@@ -326,5 +380,6 @@ export async function getDisplayState(): Promise<DisplayState> {
     ref: p.ref,
     status: p.status,
     number: poll?.number,
+    expiresAt: new Date(p.expires_at.replace(" ", "T")).getTime(),
   };
 }

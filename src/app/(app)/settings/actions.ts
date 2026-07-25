@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb, audit } from "@/lib/db";
 import { requireModule } from "@/lib/auth";
+import { testKhqr } from "@/lib/payments";
 
 const KEYS = [
   "store_name", "store_tagline", "store_address", "store_phone", "receipt_footer",
@@ -18,6 +19,12 @@ const KEYS = [
 ];
 // Checkboxes: absent from the form data means "off", so they need explicit handling.
 const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_phone", "receipt_show_staff"];
+
+/** Generate a sample QR to verify KHQR / PayWay settings are working. */
+export async function testKhqrAction(): Promise<{ ok: boolean; message: string; image?: string }> {
+  requireModule("settings");
+  return testKhqr();
+}
 
 export async function saveSettingsAction(formData: FormData) {
   const user = requireModule("settings");

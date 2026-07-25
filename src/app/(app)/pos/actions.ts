@@ -7,6 +7,7 @@ import {
   startPayment,
   pollPayment,
   cancelPayment,
+  manualComplete,
   type CheckoutInput,
   type CheckoutResult,
   type StartPaymentResult,
@@ -51,4 +52,12 @@ export async function cancelKhqrPaymentAction(paymentId: number): Promise<{ ok: 
   cancelPayment(paymentId);
   audit(user.id, "pos.khqr_cancel", "payment", paymentId, "cancelled");
   return { ok: true };
+}
+
+/** Manually complete a pending payment (fallback when auto-detect is unavailable). */
+export async function manualCompletePaymentAction(paymentId: number): Promise<PollResult> {
+  const user = requireModule("pos");
+  const res = manualComplete(paymentId, user.id);
+  if (res.status === "paid") audit(user.id, "pos.khqr_manual", "payment", paymentId, `manual complete → sale ${res.saleId}`);
+  return res;
 }
