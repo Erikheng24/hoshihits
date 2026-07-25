@@ -468,13 +468,19 @@ export interface AiUsage {
 }
 
 /**
- * The AI providers the scanner can use, in fallback order. `envKey` decides
- * whether the provider is configured; `limitEnv` overrides its free-tier daily
+ * The AI providers the scanner can use, in fallback order. `configured` decides
+ * whether the provider actually runs; `limitEnv` overrides its free-tier daily
  * limit. Labels appear in the battery meters and the "read by …" message.
+ *
+ * Gemini is primary; a second Gemini key (GEMINI_API_KEY_2) is the reliable
+ * fallback (doubles the free quota, same proven path). Groq is OFF by default —
+ * its free vision models were deprecated in 2026 and 404, so it only runs when
+ * GROQ_ENABLED=1 is set explicitly.
  */
-export const AI_PROVIDERS: { id: string; label: string; envKey: string; limitEnv: string; defaultLimit: number }[] = [
-  { id: "gemini", label: "Gemini", envKey: "GEMINI_API_KEY", limitEnv: "GEMINI_DAILY_LIMIT", defaultLimit: 200 },
-  { id: "groq", label: "Groq", envKey: "GROQ_API_KEY", limitEnv: "GROQ_DAILY_LIMIT", defaultLimit: 1000 },
+export const AI_PROVIDERS: { id: string; label: string; limitEnv: string; defaultLimit: number; configured: () => boolean }[] = [
+  { id: "gemini", label: "Gemini", limitEnv: "GEMINI_DAILY_LIMIT", defaultLimit: 200, configured: () => !!process.env.GEMINI_API_KEY },
+  { id: "gemini2", label: "Gemini 2", limitEnv: "GEMINI2_DAILY_LIMIT", defaultLimit: 200, configured: () => !!process.env.GEMINI_API_KEY_2 },
+  { id: "groq", label: "Groq", limitEnv: "GROQ_DAILY_LIMIT", defaultLimit: 1000, configured: () => process.env.GROQ_ENABLED === "1" && !!process.env.GROQ_API_KEY },
 ];
 
 /** Count one AI photo scan against today's quota for a given provider. */
@@ -508,7 +514,7 @@ export function getAiUsage(): AiUsage {
       label: p.label,
       used: byProvider.get(p.id) ?? 0,
       limit,
-      configured: !!process.env[p.envKey],
+      configured: p.configured(),
     };
   });
 

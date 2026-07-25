@@ -13,8 +13,9 @@ const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
 
 export const GEMINI_CONFIGURED = () => !!process.env.GEMINI_API_KEY;
 
-export async function callGemini(dataUrl: string, gameHint?: string): Promise<ProviderReply> {
-  const key = process.env.GEMINI_API_KEY;
+/** Call Gemini with a specific API key (so a second key can act as a fallback). */
+export async function callGemini(dataUrl: string, gameHint?: string, apiKey?: string): Promise<ProviderReply> {
+  const key = apiKey || process.env.GEMINI_API_KEY;
   if (!key) return { ok: false, retriable: true, message: "Gemini key not set." };
 
   const parsed = parseDataUrl(dataUrl);

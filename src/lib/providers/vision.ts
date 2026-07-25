@@ -1,30 +1,34 @@
 import "server-only";
 import { recordAiScan, AI_PROVIDERS } from "@/lib/db";
 import { buildVisionId, type VisionId } from "./vision-core";
-import { callGemini, GEMINI_CONFIGURED } from "./vision-gemini";
-import { callGroq, GROQ_CONFIGURED } from "./vision-groq";
+import { callGemini } from "./vision-gemini";
+import { callGroq } from "./vision-groq";
 
 /**
  * Photo → card/box identification with auto-fallback across AI providers.
  *
- * Gemini is tried first; if it fails, hits its rate limit, or can't read the
- * item, the next configured provider (Groq — free, no card) is tried
- * automatically. Each request is counted against that provider's own daily
- * quota so the battery meters stay accurate, and the winning provider's name is
- * returned so the UI can show which AI answered.
+ * Gemini (key 1) is tried first; if it fails, hits its rate limit, or can't
+ * read the item, the next configured provider is tried automatically — a second
+ * Gemini key (reliable, doubles the free quota), then Groq only if explicitly
+ * enabled. Each request is counted against that provider's own daily quota so
+ * the battery meters stay accurate, and the winning provider's name is returned
+ * so the UI can show which AI answered.
  */
 
 type Caller = (dataUrl: string, gameHint?: string) => ReturnType<typeof callGemini>;
 
-const CHAIN: { id: string; configured: () => boolean; call: Caller }[] = [
-  { id: "gemini", configured: GEMINI_CONFIGURED, call: callGemini },
-  { id: "groq", configured: GROQ_CONFIGURED, call: callGroq },
+// One entry per provider id in AI_PROVIDERS. `configured` (and thus whether a
+// provider runs at all) is owned by AI_PROVIDERS, so this only maps id → call.
+const CALLERS: { id: string; call: Caller }[] = [
+  { id: "gemini", call: (u, h) => callGemini(u, h, process.env.GEMINI_API_KEY) },
+  { id: "gemini2", call: (u, h) => callGemini(u, h, process.env.GEMINI_API_KEY_2) },
+  { id: "groq", call: callGroq },
 ];
 
 export type { VisionId };
 
 export async function identifyPhoto(dataUrl: string, gameHint?: string): Promise<VisionId> {
-  const active = CHAIN.filter((p) => p.configured());
+  const active = CALLERS.filter((p) => AI_PROVIDERS.find((x) => x.id === p.id)?.configured());
 
   if (active.length === 0) {
     return {
