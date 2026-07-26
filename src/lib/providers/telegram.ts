@@ -1,14 +1,18 @@
 import "server-only";
+import crypto from "crypto";
 import { getDb } from "@/lib/db";
 
 /**
- * Telegram notifications for the customer storefront.
+ * Telegram bot for the customer storefront.
  *
- * A free bot (from @BotFather) lets the website push each new order straight
- * into the shop's Telegram. Config lives in Settings:
- *   telegram_bot_token        – the bot token from BotFather
- *   telegram_admin_chat_id    – the chat that receives orders (owner DM or a group)
- *   telegram_admin_username   – the @username customers are sent to, to pay
+ * A free bot (from @BotFather) does two jobs:
+ *   1. Notifies the shop of every new order (owner's chat).
+ *   2. Chats with the customer after "Order now": confirms the order, shows the
+ *      shop's ABA/ACLEDA payment QR images, and offers "I've paid" / "Contact
+ *      admin" buttons — driven by a webhook (/api/telegram/webhook).
+ *
+ * Config (Settings): telegram_bot_token, telegram_admin_chat_id,
+ * telegram_admin_username. Payment QRs: payment_qr_aba, payment_qr_acleda.
  */
 export interface TelegramConfig {
   botToken: string;
@@ -28,16 +32,44 @@ export function getTelegramConfig(): TelegramConfig {
   };
 }
 
-/** True when the bot can push orders to the shop's Telegram. */
 export function telegramConfigured(): boolean {
   const c = getTelegramConfig();
   return !!c.botToken && !!c.adminChatId;
 }
 
-/** The link a customer opens to chat with the shop about payment. */
+/** True when just the bot token is set (enough for the customer chat flow). */
+export function botTokenSet(): boolean {
+  return !!getTelegramConfig().botToken;
+}
+
 export function adminChatLink(): string | null {
   const u = getTelegramConfig().adminUsername;
   return u ? `https://t.me/${u}` : null;
+}
+
+/** A stable secret for the Telegram webhook, derived from HOSHI_SECRET. */
+export function webhookSecret(): string {
+  const base = process.env.HOSHI_SECRET ?? "hoshihits-dev-secret-change-in-production";
+  return crypto.createHmac("sha256", base).update("telegram-webhook").digest("hex").slice(0, 40);
+}
+
+type InlineKeyboard = { inline_keyboard: { text: string; url?: string; callback_data?: string }[][] };
+
+async function api(method: string, body: unknown): Promise<{ ok: boolean; result?: unknown; description?: string }> {
+  const { botToken } = getTelegramConfig();
+  if (!botToken) return { ok: false, description: "No bot token set." };
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: AbortSignal.timeout(12000),
+    });
+    return (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; description?: string };
+  } catch {
+    return { ok: false, description: "Couldn't reach Telegram." };
+  }
 }
 
 export interface TelegramResult {
@@ -45,22 +77,72 @@ export interface TelegramResult {
   message?: string;
 }
 
-/** Send a message (HTML formatted) to the shop's Telegram. */
+/** Send an HTML message to the shop's own Telegram (order notifications). */
 export async function sendTelegram(text: string): Promise<TelegramResult> {
-  const { botToken, adminChatId } = getTelegramConfig();
-  if (!botToken || !adminChatId) return { ok: false, message: "Telegram bot isn't set up in Settings." };
+  const { adminChatId } = getTelegramConfig();
+  if (!adminChatId) return { ok: false, message: "No admin chat ID set in Settings." };
+  const r = await api("sendMessage", { chat_id: adminChatId, text, parse_mode: "HTML", disable_web_page_preview: true });
+  return { ok: r.ok, message: r.ok ? undefined : r.description || "Telegram rejected the message." };
+}
+
+/** Send an HTML message to any chat (e.g. replying to a customer), with optional buttons. */
+export async function sendMessageTo(chatId: string | number, text: string, keyboard?: InlineKeyboard): Promise<TelegramResult> {
+  const r = await api("sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    ...(keyboard ? { reply_markup: keyboard } : {}),
+  });
+  return { ok: r.ok, message: r.description };
+}
+
+/** Send a photo (from a data URL) to a chat — used for the payment QR images. */
+export async function sendPhotoDataUrl(chatId: string | number, dataUrl: string, caption?: string): Promise<TelegramResult> {
+  const { botToken } = getTelegramConfig();
+  const m = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!botToken || !m) return { ok: false, message: "No photo / bot token." };
   try {
-    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    const ext = m[1].split("/")[1].replace("jpeg", "jpg");
+    const form = new FormData();
+    form.append("chat_id", String(chatId));
+    if (caption) {
+      form.append("caption", caption);
+      form.append("parse_mode", "HTML");
+    }
+    form.append("photo", new Blob([Buffer.from(m[2], "base64")], { type: m[1] }), `qr.${ext}`);
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ chat_id: adminChatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+      body: form,
       cache: "no-store",
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(15000),
     });
-    const data = (await res.json().catch(() => null)) as { ok?: boolean; description?: string } | null;
-    if (!data?.ok) return { ok: false, message: data?.description || "Telegram rejected the message — check the bot token and chat ID." };
-    return { ok: true };
+    const d = (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; description?: string };
+    return { ok: d.ok, message: d.description };
   } catch {
-    return { ok: false, message: "Couldn't reach Telegram." };
+    return { ok: false, message: "Couldn't upload the photo to Telegram." };
   }
+}
+
+export async function answerCallback(callbackId: string, text?: string): Promise<void> {
+  await api("answerCallbackQuery", { callback_query_id: callbackId, ...(text ? { text } : {}) });
+}
+
+/** Point Telegram at our webhook so the bot can chat with customers. */
+export async function setWebhook(baseUrl: string): Promise<TelegramResult> {
+  const url = `${baseUrl.replace(/\/+$/, "")}/api/telegram/webhook`;
+  const r = await api("setWebhook", {
+    url,
+    secret_token: webhookSecret(),
+    allowed_updates: ["message", "callback_query"],
+    drop_pending_updates: true,
+  });
+  return { ok: r.ok, message: r.ok ? `Bot connected to ${url}` : r.description || "setWebhook failed." };
+}
+
+/** The bot's @username, used to build the t.me/<bot>?start=… order deep link. */
+export async function getBotUsername(): Promise<string | null> {
+  const r = await api("getMe", {});
+  const u = (r.result as { username?: string } | undefined)?.username;
+  return r.ok && u ? u : null;
 }

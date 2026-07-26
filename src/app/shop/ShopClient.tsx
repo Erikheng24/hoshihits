@@ -17,6 +17,9 @@ export interface ShopProduct {
   price: number;
   stock: number;
   image: string | null;
+  image2: string | null;
+  image3: string | null;
+  description: string | null;
 }
 
 const CATS = [
@@ -47,6 +50,8 @@ export function ShopClient({
   const [cat, setCat] = useState("");
   const [cart, setCart] = useState<Record<number, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
+  const [detail, setDetail] = useState<ShopProduct | null>(null);
+  const [detailImg, setDetailImg] = useState(0);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
@@ -98,8 +103,8 @@ export function ShopClient({
         setErr(res.error ?? "Something went wrong. Please try again.");
         return;
       }
-      // If the bot couldn't post it, copy the order so the customer can paste it.
-      if (!res.telegramSent && res.orderText) {
+      // No bot? Copy the order so the customer can paste it into the chat.
+      if (!res.usesBot && res.orderText) {
         try {
           await navigator.clipboard.writeText(res.orderText);
         } catch {
@@ -128,13 +133,15 @@ export function ShopClient({
           <h1 className="font-display text-xl tracking-wide">Order placed!</h1>
           <p className="text-fog text-sm mt-1 num">Order {done.number}</p>
           <p className="text-mist text-sm mt-4">
-            {done.telegramSent
-              ? "We've sent your order to the shop. Tap below to open our Telegram and arrange payment."
-              : "Tap below to open our Telegram — your order is copied, just paste and send it to us."}
+            {done.usesBot
+              ? "Tap below to open our Telegram bot — it'll show your order and the QR code to pay."
+              : done.telegramLink
+              ? "Tap below to open our Telegram — your order is copied, just paste and send it to us."
+              : "We'll contact you on the phone number you provided to arrange payment."}
           </p>
           {done.telegramLink ? (
             <a href={done.telegramLink} target="_blank" rel="noopener" className="btn-gold w-full py-3 mt-5 justify-center">
-              Open Telegram to pay
+              {done.usesBot ? "Open Telegram to pay" : "Open Telegram"}
             </a>
           ) : (
             <p className="text-fog text-[12px] mt-5">The shop will contact you on the phone number you provided.</p>
@@ -212,16 +219,26 @@ export function ShopClient({
               const qty = cart[p.id] ?? 0;
               return (
                 <div key={p.id} className="card overflow-hidden flex flex-col">
-                  <div className="aspect-square bg-panel-2 grid place-items-center overflow-hidden">
+                  <button
+                    onClick={() => { setDetail(p); setDetailImg(0); }}
+                    className="aspect-square bg-panel-2 grid place-items-center overflow-hidden relative group"
+                  >
                     {p.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-fog text-4xl">★</span>
                     )}
-                  </div>
+                    {[p.image2, p.image3].filter(Boolean).length > 0 && (
+                      <span className="absolute bottom-1.5 right-1.5 text-[10px] bg-black/60 text-white rounded px-1.5 py-0.5">
+                        📷 {1 + [p.image2, p.image3].filter(Boolean).length}
+                      </span>
+                    )}
+                  </button>
                   <div className="p-3 flex flex-col flex-1">
-                    <p className="text-[13px] text-white leading-snug line-clamp-2">{p.name}</p>
+                    <button onClick={() => { setDetail(p); setDetailImg(0); }} className="text-left">
+                      <p className="text-[13px] text-white leading-snug line-clamp-2 hover:text-gold-soft">{p.name}</p>
+                    </button>
                     <p className="text-[11px] text-fog mt-0.5 truncate">
                       {[p.set_name, p.grade_company && p.grade ? `${p.grade_company} ${p.grade}` : p.condition, p.rarity].filter(Boolean).join(" · ") || p.game}
                     </p>
@@ -256,6 +273,60 @@ export function ShopClient({
           View cart · {money(total)}
         </button>
       )}
+
+      {/* Product detail */}
+      {detail && (() => {
+        const imgs = [detail.image, detail.image2, detail.image3].filter(Boolean) as string[];
+        const qty = cart[detail.id] ?? 0;
+        const meta = [detail.set_name, detail.grade_company && detail.grade ? `${detail.grade_company} ${detail.grade}` : detail.condition, detail.rarity, detail.game].filter(Boolean);
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+            <div className="absolute inset-0 bg-black/80 animate-fadein" onClick={() => setDetail(null)} />
+            <div className="relative card shadow-pop w-full sm:max-w-md max-h-[92vh] overflow-y-auto animate-rise rounded-b-none sm:rounded-card">
+              <button onClick={() => setDetail(null)} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/50 text-white grid place-items-center">×</button>
+              <div className="aspect-square bg-panel-2 grid place-items-center overflow-hidden">
+                {imgs[detailImg] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imgs[detailImg]} alt={detail.name} className="w-full h-full object-contain" />
+                ) : (
+                  <span className="text-fog text-5xl">★</span>
+                )}
+              </div>
+              {imgs.length > 1 && (
+                <div className="flex gap-2 px-4 pt-3 justify-center">
+                  {imgs.map((im, i) => (
+                    <button key={i} onClick={() => setDetailImg(i)} className={`w-12 h-12 rounded-lg overflow-hidden border-2 ${i === detailImg ? "border-gold" : "border-edge"}`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={im} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="p-5">
+                <h2 className="text-white font-medium text-lg leading-snug">{detail.name}</h2>
+                <p className="text-[12px] text-fog mt-1">{meta.join(" · ")}</p>
+                <p className="num text-2xl text-gold-soft font-semibold mt-2">{money(detail.price)}</p>
+                <p className="text-[11px] text-fog num">{detail.stock} in stock</p>
+                {detail.description && <p className="text-[13px] text-mist mt-3 whitespace-pre-line">{detail.description}</p>}
+                <div className="mt-5">
+                  {qty === 0 ? (
+                    <button onClick={() => add(detail.id)} className="btn-gold w-full py-3 justify-center">Add to cart</button>
+                  ) : (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setQty(detail.id, qty - 1)} className="btn-ghost w-10 h-10 !rounded-lg text-lg">−</button>
+                        <span className="num text-lg w-6 text-center">{qty}</span>
+                        <button onClick={() => setQty(detail.id, qty + 1)} disabled={qty >= detail.stock} className="btn-ghost w-10 h-10 !rounded-lg text-lg disabled:opacity-40">+</button>
+                      </div>
+                      <button onClick={() => { setDetail(null); setCartOpen(true); }} className="btn-gold flex-1 py-3 justify-center">In cart · view</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Cart / checkout drawer */}
       {cartOpen && (

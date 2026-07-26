@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getDb, audit } from "@/lib/db";
 import { requireModule } from "@/lib/auth";
 import { testKhqr } from "@/lib/payments";
-import { sendTelegram } from "@/lib/providers/telegram";
+import { sendTelegram, setWebhook } from "@/lib/providers/telegram";
 
 const KEYS = [
   "store_name", "store_tagline", "store_address", "store_phone", "receipt_footer",
@@ -19,7 +19,11 @@ const KEYS = [
   "payway_merchant_id", "payway_api_key", "payway_sandbox", "payway_qr", "app_base_url",
   // Customer storefront + Telegram ordering
   "shop_enabled", "shop_welcome", "telegram_bot_token", "telegram_admin_chat_id", "telegram_admin_username",
+  // Payment instructions shown by the bot
+  "payment_note",
 ];
+// Image settings (data URLs), saved with a size cap like the logo.
+const IMAGE_KEYS = ["logo", "payment_qr_aba", "payment_qr_acleda"];
 // Checkboxes: absent from the form data means "off", so they need explicit handling.
 const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_phone", "receipt_show_staff"];
 
@@ -34,6 +38,17 @@ export async function testTelegramAction(): Promise<{ ok: boolean; message: stri
   requireModule("settings");
   const res = await sendTelegram("✅ <b>HoshiHits test</b> — your shop's Telegram is connected. New orders will arrive here.");
   return { ok: res.ok, message: res.ok ? "Test message sent — check your Telegram." : res.message ?? "Failed to send." };
+}
+
+/** Register the bot webhook so it can chat with customers (order + QR + buttons). */
+export async function connectBotAction(): Promise<{ ok: boolean; message: string }> {
+  requireModule("settings");
+  const base =
+    (getDb().prepare("SELECT value FROM settings WHERE key='app_base_url'").get() as { value: string } | undefined)?.value ||
+    process.env.APP_BASE_URL ||
+    "https://hoshihits.onrender.com";
+  const res = await setWebhook(base);
+  return { ok: res.ok, message: res.message ?? (res.ok ? "Bot connected." : "Failed.") };
 }
 
 export async function saveSettingsAction(formData: FormData) {
@@ -52,12 +67,16 @@ export async function saveSettingsAction(formData: FormData) {
     for (const key of TOGGLES) up.run(key, formData.get(key) ? "1" : "0");
   }
 
-  // Logo: a downscaled data URL, or empty to clear it. Capped so a stray upload
-  // can't bloat the settings row.
-  const logo = String(formData.get("logo") ?? "").trim();
-  if (logo === "") up.run("logo", "");
-  else if (logo.startsWith("data:image/") && logo.length < 400_000) up.run("logo", logo);
-  audit(user.id, "settings.update", "settings", undefined, [...KEYS, "logo"].join(", "));
+  // Image settings (logo, payment QRs): a downscaled data URL, "" to clear it,
+  // or absent to leave unchanged. Capped so a stray upload can't bloat the row.
+  for (const key of IMAGE_KEYS) {
+    const raw = formData.get(key);
+    if (raw === null) continue; // field not on this form — leave as-is
+    const v = String(raw).trim();
+    if (v === "") up.run(key, "");
+    else if (v.startsWith("data:image/") && v.length < 500_000) up.run(key, v);
+  }
+  audit(user.id, "settings.update", "settings", undefined, [...KEYS, ...IMAGE_KEYS].join(", "));
   revalidatePath("/", "layout"); // branding shows in the shell, so refresh everything
   redirect("/settings");
 }

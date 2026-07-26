@@ -4,8 +4,10 @@ import { shortDateTime } from "@/lib/format";
 import { PageHeader, Card, Badge } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { LogoUpload } from "@/components/LogoUpload";
+import { ImageUploadField } from "@/components/ImageUploadField";
 import { KhqrTest } from "@/components/KhqrTest";
 import { TelegramTest } from "@/components/TelegramTest";
+import { ConnectBot } from "@/components/ConnectBot";
 import { getReceiptConfig } from "@/lib/receipt-config";
 import { saveSettingsAction, resetDataAction } from "./actions";
 
@@ -76,6 +78,20 @@ export default function SettingsPage() {
           <label className="field"><span>Your @username (customer chats here)</span>
             <input name="telegram_admin_username" className="input" defaultValue={settings.telegram_admin_username ?? ""} placeholder="@HoshiHits" />
           </label>
+
+          {/* Payment QR images the bot shows customers at checkout */}
+          <div className="sm:col-span-2 pt-1">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-mist mb-1">Payment QR (shown by the bot)</p>
+            <div className="gold-rule mb-3" />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <ImageUploadField name="payment_qr_aba" label="ABA QR" hint="Screenshot your ABA 'receive' QR." initial={settings.payment_qr_aba?.startsWith("data:image/") ? settings.payment_qr_aba : null} />
+              <ImageUploadField name="payment_qr_acleda" label="ACLEDA QR" hint="Screenshot your ACLEDA 'receive' QR." initial={settings.payment_qr_acleda?.startsWith("data:image/") ? settings.payment_qr_acleda : null} />
+            </div>
+          </div>
+          <label className="field sm:col-span-2"><span>Payment note (optional, shown with the QR)</span>
+            <input name="payment_note" className="input" defaultValue={settings.payment_note ?? ""} placeholder="e.g. Please send the payment screenshot after paying." />
+          </label>
+
           <div className="sm:col-span-2 flex items-center justify-between gap-3 flex-wrap">
             <Badge tone={settings.telegram_bot_token && settings.telegram_admin_chat_id ? "green" : "gray"}>
               {settings.telegram_bot_token && settings.telegram_admin_chat_id ? "Bot connected" : "Bot not set up"}
@@ -83,7 +99,10 @@ export default function SettingsPage() {
             <button className="btn-gold px-5 py-2 text-sm">Save shop settings</button>
           </div>
         </form>
-        <div className="mt-4 pt-4 border-t border-edge/70"><TelegramTest /></div>
+        <div className="mt-4 pt-4 border-t border-edge/70 space-y-3">
+          <p className="text-[12px] text-fog">After saving the bot token, tap <b>Connect bot</b> once so the bot can chat with customers. Message the bot <span className="num text-mist">/id</span> to get your chat ID.</p>
+          <div className="flex flex-wrap gap-3"><ConnectBot /><TelegramTest /></div>
+        </div>
       </Card>
 
       <Card title="KHQR Payment (Bakong)" className="p-5 mb-4">

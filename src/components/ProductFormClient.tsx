@@ -20,6 +20,7 @@ interface ProductLike {
   condition?: string | null; language?: string | null; foil?: number;
   grade_company?: string | null; grade?: string | null; cert_number?: string | null;
   barcode?: string | null; image?: string | null;
+  image2?: string | null; image3?: string | null; description?: string | null;
   price: number; cost: number; stock: number; low_stock: number;
 }
 
@@ -41,6 +42,21 @@ export function ProductFormClient({
   const [scanOpen, setScanOpen] = useState(false);
   const [image, setImage] = useState<string | null>(product.image ?? null);
   const [scanImage, setScanImage] = useState<string>(""); // new capture to submit
+  // Extra shop photos (submitted as-is): "" = none.
+  const [image2, setImage2] = useState<string>(product.image2 ?? "");
+  const [image3, setImage3] = useState<string>(product.image3 ?? "");
+
+  async function pickExtra(setter: (v: string) => void, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setter(await fileToDataUrl(file, 800, 0.82));
+    } catch {
+      /* ignore unreadable */
+    } finally {
+      e.target.value = "";
+    }
+  }
 
   // Scannable fields live in state so a scan can fill them; the rest stay uncontrolled.
   const [f, setF] = useState({
@@ -205,6 +221,39 @@ export function ProductFormClient({
         <label className="flex items-center gap-2 text-sm text-mist sm:col-span-2">
           <input type="checkbox" name="foil" defaultChecked={!!product.foil} className="accent-[#D4AF37]" /> Foil / holo
         </label>
+
+        {/* ---- Storefront: extra photos + description (shown on the customer shop) ---- */}
+        <div className="sm:col-span-2 pt-2">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-mist mb-1">Customer shop</p>
+          <div className="gold-rule mb-3" />
+          <input type="hidden" name="image2" value={image2} />
+          <input type="hidden" name="image3" value={image3} />
+          <p className="text-[12px] text-fog mb-2">Extra photos shown on your public shop (the main photo above is photo 1).</p>
+          <div className="flex gap-3">
+            {[{ v: image2, set: setImage2, label: "Photo 2" }, { v: image3, set: setImage3, label: "Photo 3" }].map((slot, i) => (
+              <div key={i} className="text-center">
+                <label className="block w-20 h-20 rounded-lg border border-edge bg-panel-2 overflow-hidden cursor-pointer grid place-items-center hover:border-gold/40">
+                  {slot.v ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={slot.v} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Icon name="plus" className="w-5 h-5 text-fog" />
+                  )}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => pickExtra(slot.set, e)} />
+                </label>
+                {slot.v ? (
+                  <button type="button" onClick={() => slot.set("")} className="text-[11px] text-ruby/80 hover:text-ruby mt-1">Remove</button>
+                ) : (
+                  <span className="text-[11px] text-fog mt-1 block">{slot.label}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        <label className="field sm:col-span-2"><span>Description (shown on the shop)</span>
+          <textarea name="description" rows={3} className="input" defaultValue={product.description ?? ""} placeholder="Condition notes, what's included, why it's special…" />
+        </label>
+
         <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
           <Link href={basePath} className="btn-ghost px-4 py-2 text-sm">Cancel</Link>
           <button className="btn-gold px-5 py-2 text-sm">{editingId ? "Save changes" : "Create product"}</button>

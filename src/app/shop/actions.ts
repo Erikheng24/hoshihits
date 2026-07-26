@@ -2,7 +2,7 @@
 
 import { getDb, nextNumber, ts } from "@/lib/db";
 import { getBranding } from "@/lib/branding";
-import { sendTelegram, adminChatLink, telegramConfigured } from "@/lib/providers/telegram";
+import { sendTelegram, adminChatLink, telegramConfigured, botTokenSet, getBotUsername } from "@/lib/providers/telegram";
 import { money } from "@/lib/format";
 
 export interface WebOrderLine {
@@ -19,7 +19,8 @@ export interface PlaceOrderResult {
   ok: boolean;
   error?: string;
   number?: string;
-  telegramLink?: string | null; // admin chat to open
+  telegramLink?: string | null; // bot deep link (preferred) or admin chat
+  usesBot?: boolean;            // link opens the order bot (shows QR + buttons)
   telegramSent?: boolean;       // order was pushed to the shop's Telegram
   orderText?: string;           // plain text, for the copy-&-paste fallback
 }
@@ -89,12 +90,28 @@ export async function placeWebOrderAction(input: PlaceOrderInput): Promise<Place
     `💰 <b>Total: ${money(total)}</b>`,
   ].join("\n");
 
+  // Notify the shop's own Telegram straight away (even if the customer never
+  // opens the bot).
   let telegramSent = false;
   if (telegramConfigured()) {
     const sent = await sendTelegram(html);
     telegramSent = sent.ok;
-    if (sent.ok) db.prepare("UPDATE web_orders SET status = 'contacted' WHERE id = ?").run(orderId);
   }
 
-  return { ok: true, number, telegramLink: adminChatLink(), telegramSent, orderText: plain };
+  // Prefer sending the customer into the BOT (it shows the order + payment QR +
+  // buttons). Fall back to the admin chat, then to copy-&-paste.
+  let botLink: string | null = null;
+  if (botTokenSet()) {
+    const uname = await getBotUsername();
+    if (uname) botLink = `https://t.me/${uname}?start=${encodeURIComponent(number)}`;
+  }
+
+  return {
+    ok: true,
+    number,
+    telegramLink: botLink ?? adminChatLink(),
+    usesBot: !!botLink,
+    telegramSent,
+    orderText: plain,
+  };
 }

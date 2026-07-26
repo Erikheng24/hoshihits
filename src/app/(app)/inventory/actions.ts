@@ -28,6 +28,15 @@ export async function saveProductAction(formData: FormData) {
   const isHttpsImg = /^https:\/\/[^\s"'<>]+$/.test(rawImage) && rawImage.length < 600;
   const image = isDataImg || isHttpsImg ? rawImage : null;
 
+  // Extra storefront photos + description.
+  const extraImg = (v: FormDataEntryValue | null) => {
+    const s = String(v ?? "").trim();
+    return s.startsWith("data:image/") && s.length < 900_000 ? s : null;
+  };
+  const image2 = extraImg(formData.get("image2"));
+  const image3 = extraImg(formData.get("image3"));
+  const description = String(formData.get("description") ?? "").trim() || null;
+
   const fields = {
     name: String(formData.get("name") ?? "").trim(),
     game: String(formData.get("game") ?? "").trim() || "Accessories",
@@ -61,22 +70,22 @@ export async function saveProductAction(formData: FormData) {
       db.prepare(
         `UPDATE products SET name=?, game=?, category=?, set_name=?, rarity=?,
           condition=?, language=?, foil=?, grade_company=?, grade=?,
-          cert_number=?, barcode=?, image=?, price=?, cost=?, stock=?, low_stock=?
+          cert_number=?, barcode=?, image=?, image2=?, image3=?, description=?, price=?, cost=?, stock=?, low_stock=?
          WHERE id=?`
       ).run(
         f.name, f.game, f.category, f.set_name, f.rarity, f.condition, f.language, f.foil,
-        f.grade_company, f.grade, f.cert_number, f.barcode, clearImage ? null : image,
+        f.grade_company, f.grade, f.cert_number, f.barcode, clearImage ? null : image, image2, image3, description,
         f.price, f.cost, f.stock, f.low_stock, id
       );
     } else {
       db.prepare(
         `UPDATE products SET name=?, game=?, category=?, set_name=?, rarity=?,
           condition=?, language=?, foil=?, grade_company=?, grade=?,
-          cert_number=?, barcode=?, price=?, cost=?, stock=?, low_stock=?
+          cert_number=?, barcode=?, image2=?, image3=?, description=?, price=?, cost=?, stock=?, low_stock=?
          WHERE id=?`
       ).run(
         f.name, f.game, f.category, f.set_name, f.rarity, f.condition, f.language, f.foil,
-        f.grade_company, f.grade, f.cert_number, f.barcode, f.price, f.cost, f.stock, f.low_stock, id
+        f.grade_company, f.grade, f.cert_number, f.barcode, image2, image3, description, f.price, f.cost, f.stock, f.low_stock, id
       );
     }
     audit(user.id, "inventory.update", "product", id, fields.name);
@@ -89,12 +98,12 @@ export async function saveProductAction(formData: FormData) {
     const r = db
       .prepare(
         `INSERT INTO products (sku, barcode, name, game, category, set_name, rarity, condition, language, foil,
-          grade_company, grade, cert_number, image, price, cost, stock, low_stock, active, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)`
+          grade_company, grade, cert_number, image, image2, image3, description, price, cost, stock, low_stock, active, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 1, ?)`
       )
       .run(
         sku, f.barcode, f.name, f.game, f.category, f.set_name, f.rarity, f.condition, f.language, f.foil,
-        f.grade_company, f.grade, f.cert_number, image, f.price, f.cost, f.stock, f.low_stock, ts()
+        f.grade_company, f.grade, f.cert_number, image, image2, image3, description, f.price, f.cost, f.stock, f.low_stock, ts()
       );
     audit(user.id, "inventory.create", "product", Number(r.lastInsertRowid), fields.name);
   }

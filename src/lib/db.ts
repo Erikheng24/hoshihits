@@ -292,6 +292,10 @@ function migrate(db: DbConn) {
   if (!productCols.includes("image")) db.exec(`ALTER TABLE products ADD COLUMN image TEXT`);
   if (!productCols.includes("notes")) db.exec(`ALTER TABLE products ADD COLUMN notes TEXT`);
   if (!productCols.includes("market_price")) db.exec(`ALTER TABLE products ADD COLUMN market_price INTEGER`);
+  // Storefront: extra photos + a customer-facing description.
+  if (!productCols.includes("image2")) db.exec(`ALTER TABLE products ADD COLUMN image2 TEXT`);
+  if (!productCols.includes("image3")) db.exec(`ALTER TABLE products ADD COLUMN image3 TEXT`);
+  if (!productCols.includes("description")) db.exec(`ALTER TABLE products ADD COLUMN description TEXT`);
   // Preorders can now carry a reference photo of the box/card the customer ordered.
   if (!cols("preorders").includes("image")) db.exec(`ALTER TABLE preorders ADD COLUMN image TEXT`);
   // AI usage is tracked per provider (Gemini, Groq…). Older DBs had a single

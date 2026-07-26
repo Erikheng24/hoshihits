@@ -15,7 +15,8 @@ export default function ShopPage() {
   const db = getDb();
   const products = db
     .prepare(
-      `SELECT id, name, game, category, set_name, rarity, condition, grade_company, grade, price, stock, image
+      `SELECT id, name, game, category, set_name, rarity, condition, grade_company, grade, price, stock,
+              image, image2, image3, description
        FROM products WHERE active = 1 AND stock > 0 ORDER BY game, name`
     )
     .all() as ShopProduct[];
