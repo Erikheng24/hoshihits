@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { webhookSecret, answerCallback, sendMessageTo, getTelegramConfig } from "@/lib/providers/telegram";
-import { sendCustomerOrder, handlePaidClaim, handleContact, handlePaymentPhoto } from "@/lib/shop-bot";
+import {
+  sendCustomerOrder, handlePaidClaim, handleContact, handlePaymentPhoto,
+  approveOrder, promptDelivery, sendDeliveryToCustomer, parseDeliveryOrder,
+} from "@/lib/shop-bot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,15 +27,20 @@ export async function POST(req: Request) {
   }
 
   try {
+    const adminChatId = getTelegramConfig().adminChatId;
+
     // Button taps.
     if (update.callback_query) {
       const cq = update.callback_query;
       const chatId = cq.message?.chat?.id;
       const data: string = cq.data ?? "";
+      const fromAdmin = !!adminChatId && String(chatId) === String(adminChatId);
       await answerCallback(cq.id);
       if (chatId) {
         if (data.startsWith("paid:")) await handlePaidClaim(chatId, data.slice(5));
         else if (data.startsWith("contact:")) await handleContact(chatId, data.slice(8));
+        else if (data.startsWith("approve:") && fromAdmin) await approveOrder(data.slice(8));
+        else if (data.startsWith("deliver:") && fromAdmin) await promptDelivery(chatId, data.slice(8));
       }
       return NextResponse.json({ ok: true });
     }
@@ -43,10 +51,19 @@ export async function POST(req: Request) {
     const text: string = (msg?.text ?? "").trim();
     if (!chatId) return NextResponse.json({ ok: true });
 
-    // A photo (or a photo sent as a file) = payment proof → forward to the shop.
     const photoId: string | undefined =
       (Array.isArray(msg?.photo) && msg.photo.length ? msg.photo[msg.photo.length - 1]?.file_id : undefined) ||
       (msg?.document?.mime_type?.startsWith?.("image/") ? msg.document.file_id : undefined);
+
+    // Admin replying to the delivery prompt → send the link/photo to the customer.
+    const deliverOrder = parseDeliveryOrder(msg?.reply_to_message?.text);
+    if (deliverOrder && adminChatId && String(chatId) === String(adminChatId)) {
+      if (photoId) await sendDeliveryToCustomer(deliverOrder, { fileId: photoId });
+      else if (text) await sendDeliveryToCustomer(deliverOrder, { text });
+      return NextResponse.json({ ok: true });
+    }
+
+    // A photo from a customer = payment proof → forward to the shop.
     if (photoId) {
       await handlePaymentPhoto(chatId, photoId);
       return NextResponse.json({ ok: true });

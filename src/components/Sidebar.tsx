@@ -11,7 +11,7 @@ import type { Branding } from "@/lib/branding";
 
 const SECTIONS: NavItem["section"][] = ["Store", "Catalog", "Operations", "Back Office"];
 
-function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
+function NavLinks({ items, badges, onNavigate }: { items: NavItem[]; badges?: Record<string, number>; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <nav className="flex-1 overflow-y-auto px-3 pb-6 space-y-5">
@@ -24,6 +24,7 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
             <ul className="space-y-0.5">
               {group.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                const count = badges?.[item.key] ?? 0;
                 return (
                   <li key={item.key}>
                     <Link
@@ -37,7 +38,11 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
                     >
                       <Icon name={item.icon} className={`w-[18px] h-[18px] ${active ? "text-gold" : "text-fog group-hover:text-mist"}`} />
                       {item.label}
-                      {active && <span className="ml-auto w-1 h-1 rounded-full bg-gold" />}
+                      {count > 0 ? (
+                        <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-ruby text-white text-[10px] font-bold grid place-items-center">{count > 9 ? "9+" : count}</span>
+                      ) : (
+                        active && <span className="ml-auto w-1 h-1 rounded-full bg-gold" />
+                      )}
                     </Link>
                   </li>
                 );
@@ -60,12 +65,12 @@ function Brand({ brand }: { brand: Branding }) {
   );
 }
 
-export function Sidebar({ items, brand }: { items: NavItem[]; brand: Branding }) {
+export function Sidebar({ items, brand, badges }: { items: NavItem[]; brand: Branding; badges?: Record<string, number> }) {
   return (
     <aside className="hidden lg:flex flex-col w-[248px] shrink-0 border-r border-edge bg-[#0d0d0d]/80 sticky top-0 h-screen">
       <Brand brand={brand} />
       <div className="gold-rule mx-6 mb-4" />
-      <NavLinks items={items} />
+      <NavLinks items={items} badges={badges} />
     </aside>
   );
 }
@@ -94,7 +99,7 @@ export function MobileTabBar({ items }: { items: NavItem[] }) {
 }
 
 /** Mobile: hamburger + slide-in drawer (rendered inside the topbar) */
-export function MobileNav({ items, brand }: { items: NavItem[]; brand: Branding }) {
+export function MobileNav({ items, brand, badges }: { items: NavItem[]; brand: Branding; badges?: Record<string, number> }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -121,7 +126,7 @@ export function MobileNav({ items, brand }: { items: NavItem[]; brand: Branding 
                 </button>
               </div>
               <div className="gold-rule mx-6 mb-4 shrink-0" />
-              <NavLinks items={items} onNavigate={() => setOpen(false)} />
+              <NavLinks items={items} badges={badges} onNavigate={() => setOpen(false)} />
             </div>
           </div>
         </Portal>

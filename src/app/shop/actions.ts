@@ -3,6 +3,7 @@
 import { getDb, nextNumber, ts } from "@/lib/db";
 import { getBranding } from "@/lib/branding";
 import { sendTelegram, adminChatLink, telegramConfigured, botTokenSet, getBotUsername } from "@/lib/providers/telegram";
+import { adminOrderKeyboard } from "@/lib/shop-bot";
 import { money } from "@/lib/format";
 
 export interface WebOrderLine {
@@ -105,7 +106,7 @@ export async function placeWebOrderAction(input: PlaceOrderInput): Promise<Place
   // opens the bot).
   let telegramSent = false;
   if (telegramConfigured()) {
-    const sent = await sendTelegram(html);
+    const sent = await sendTelegram(html, adminOrderKeyboard(number, "approve"));
     telegramSent = sent.ok;
   }
 

@@ -1,7 +1,24 @@
 import "server-only";
 import { getDb } from "./db";
 import { money } from "./format";
-import { sendMessageTo, sendPhotoDataUrl, sendPhotoByFileId, sendTelegram, adminChatLink, getTelegramConfig } from "./providers/telegram";
+import { sendMessageTo, sendPhotoDataUrl, sendPhotoByFileId, sendForceReply, sendTelegram, adminChatLink, getTelegramConfig } from "./providers/telegram";
+
+/** Inline buttons for an order in the admin chat (approve / send delivery). */
+export function adminOrderKeyboard(orderNumber: string, stage: "approve" | "deliver" = "approve") {
+  return {
+    inline_keyboard: [
+      stage === "approve"
+        ? [{ text: "✅ Approve order", callback_data: `approve:${orderNumber}` }]
+        : [{ text: "📦 Send delivery to customer", callback_data: `deliver:${orderNumber}` }],
+    ],
+  };
+}
+/** Marker text the delivery force-reply prompt carries, so a reply can be matched to an order. */
+const DELIVERY_MARKER = (n: string) => `🚚 DELIVERY for order ${n}`;
+export function parseDeliveryOrder(replyText: string | undefined): string | null {
+  const m = (replyText ?? "").match(/DELIVERY for order (\S+)/);
+  return m ? m[1] : null;
+}
 
 /**
  * The customer-facing bot conversation for storefront orders: after "Order now"
@@ -100,9 +117,10 @@ export async function handlePaymentPhoto(chatId: string | number, fileId: string
 
   if (!adminChatId) return;
   const caption = o
-    ? `📸 <b>Payment proof</b> — order <b>${esc(o.number)}</b>\n👤 ${esc(o.customer_name)} · ${esc(o.customer_phone)}\n💰 <b>${money(o.total)}</b>\nVerify, then mark it Paid in Web Orders.`
+    ? `📸 <b>Payment proof</b> — order <b>${esc(o.number)}</b>\n👤 ${esc(o.customer_name)} · ${esc(o.customer_phone)}\n💰 <b>${money(o.total)}</b>`
     : "📸 <b>Payment proof</b> from a customer (no matching order found).";
   await sendPhotoByFileId(adminChatId, fileId, caption);
+  if (o) await sendTelegram(`Approve order <b>${esc(o.number)}</b>?`, adminOrderKeyboard(o.number, "approve"));
 }
 
 /** Forward a payment-proof photo (from the Web App upload) to the shop's admin. */
@@ -111,10 +129,54 @@ export async function forwardPaymentProof(orderNumber: string, dataUrl: string):
   if (!adminChatId) return { ok: false, message: "The shop's Telegram isn't fully set up." };
   const o = findOrder(orderNumber);
   const caption = o
-    ? `📸 <b>Payment proof</b> — order <b>${esc(o.number)}</b>\n👤 ${esc(o.customer_name)} · ${esc(o.customer_phone)}\n💰 <b>${money(o.total)}</b>\nVerify, then mark it Paid in Web Orders.`
+    ? `📸 <b>Payment proof</b> — order <b>${esc(o.number)}</b>\n👤 ${esc(o.customer_name)} · ${esc(o.customer_phone)}\n💰 <b>${money(o.total)}</b>`
     : `📸 <b>Payment proof</b> (order ${esc(orderNumber)})`;
   const r = await sendPhotoDataUrl(adminChatId, dataUrl, caption);
+  if (o) await sendTelegram(`Approve order <b>${esc(o.number)}</b>?`, adminOrderKeyboard(o.number, "approve"));
   return { ok: r.ok, message: r.message };
+}
+
+/** Admin tapped "Approve order" — confirm to the customer and enable delivery. */
+export async function approveOrder(orderNumber: string): Promise<void> {
+  const db = getDb();
+  const o = db
+    .prepare("SELECT id, number, customer_name, total, status, customer_chat_id FROM web_orders WHERE number = ?")
+    .get(orderNumber) as (OrderRow & { customer_chat_id: string | null }) | undefined;
+  const { adminChatId } = getTelegramConfig();
+  if (!o) { if (adminChatId) await sendTelegram("That order was not found."); return; }
+
+  db.prepare("UPDATE web_orders SET status = 'paid' WHERE id = ?").run(o.id);
+  if (o.customer_chat_id) {
+    await sendMessageTo(o.customer_chat_id, `✅ <b>Your order ${esc(o.number)} is approved!</b>\nThank you — we're packing your order now and will send you delivery details shortly. 📦`);
+  }
+  await sendTelegram(`✅ <b>Approved ${esc(o.number)}</b> — the customer has been notified.\nWhen it's ready, send the delivery link/receipt 👇`, adminOrderKeyboard(o.number, "deliver"));
+}
+
+/** Admin tapped "Send delivery" — ask them to reply with the link/photo. */
+export async function promptDelivery(adminChatId: string | number, orderNumber: string): Promise<void> {
+  await sendForceReply(
+    adminChatId,
+    `${DELIVERY_MARKER(orderNumber)}\nReply to this with the <b>Grab link</b> (or attach the <b>delivery receipt photo</b>) and I'll send it to the customer.`
+  );
+}
+
+/** The admin replied with delivery info → send it to the customer, mark delivered. */
+export async function sendDeliveryToCustomer(orderNumber: string, opts: { text?: string; fileId?: string }): Promise<void> {
+  const db = getDb();
+  const o = db
+    .prepare("SELECT id, number, customer_chat_id FROM web_orders WHERE number = ?")
+    .get(orderNumber) as { id: number; number: string; customer_chat_id: string | null } | undefined;
+  const { adminChatId } = getTelegramConfig();
+  if (!o) { if (adminChatId) await sendTelegram("That order was not found."); return; }
+  if (!o.customer_chat_id) { if (adminChatId) await sendTelegram(`No customer chat for ${esc(o.number)} — they haven't opened the bot yet.`); return; }
+
+  if (opts.fileId) {
+    await sendPhotoByFileId(o.customer_chat_id, opts.fileId, `📦 <b>Your order ${esc(o.number)} is on the way!</b> 🚚\nHere is your delivery receipt. Thank you for shopping with us! 🙏`);
+  } else if (opts.text) {
+    await sendMessageTo(o.customer_chat_id, `📦 <b>Your order ${esc(o.number)} is on the way!</b> 🚚\n${esc(opts.text)}\n\nThank you for shopping with us! 🙏`);
+  }
+  db.prepare("UPDATE web_orders SET status = 'fulfilled' WHERE id = ?").run(o.id);
+  if (adminChatId) await sendTelegram(`✅ Delivery sent to the customer — order <b>${esc(o.number)}</b> marked delivered.`);
 }
 
 /** Customer tapped "Contact admin" (fallback when no @username link is set). */

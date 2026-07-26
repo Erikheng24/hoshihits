@@ -22,13 +22,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const brand = getBranding();
   const avatar = (getDb().prepare("SELECT avatar FROM users WHERE id=?").get(user.id) as { avatar: string | null } | undefined)?.avatar ?? null;
 
+  // Pending web orders (not yet paid/fulfilled/cancelled) → nav badges.
+  const badges: Record<string, number> = {};
+  if (canAccess(user.role, "web-orders")) {
+    const pending = (getDb()
+      .prepare("SELECT COUNT(*) c FROM web_orders WHERE status IN ('new','contacted')")
+      .get() as { c: number }).c;
+    if (pending > 0) { badges["web-orders"] = pending; badges["dashboard"] = pending; }
+  }
+
   return (
     <div className="flex min-h-screen">
-      <Sidebar items={items} brand={brand} />
+      <Sidebar items={items} brand={brand} badges={badges} />
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="sticky top-0 z-30 glass border-b border-edge no-print">
           <div className="flex items-center gap-3 px-4 sm:px-6 h-14">
-            <MobileNav items={items} brand={brand} />
+            <MobileNav items={items} brand={brand} badges={badges} />
             <div className="lg:hidden font-display text-sm tracking-[0.14em] text-gold-grad truncate max-w-[45vw]">
               {brand.name.toUpperCase()}
             </div>

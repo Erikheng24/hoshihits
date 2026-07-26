@@ -78,10 +78,16 @@ export interface TelegramResult {
 }
 
 /** Send an HTML message to the shop's own Telegram (order notifications). */
-export async function sendTelegram(text: string): Promise<TelegramResult> {
+export async function sendTelegram(text: string, keyboard?: InlineKeyboard): Promise<TelegramResult> {
   const { adminChatId } = getTelegramConfig();
   if (!adminChatId) return { ok: false, message: "No admin chat ID set in Settings." };
-  const r = await api("sendMessage", { chat_id: adminChatId, text, parse_mode: "HTML", disable_web_page_preview: true });
+  const r = await api("sendMessage", {
+    chat_id: adminChatId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    ...(keyboard ? { reply_markup: keyboard } : {}),
+  });
   return { ok: r.ok, message: r.ok ? undefined : r.description || "Telegram rejected the message." };
 }
 
@@ -126,6 +132,17 @@ export async function sendPhotoDataUrl(chatId: string | number, dataUrl: string,
 
 export async function answerCallback(callbackId: string, text?: string): Promise<void> {
   await api("answerCallbackQuery", { callback_query_id: callbackId, ...(text ? { text } : {}) });
+}
+
+/** Send a message that prompts the recipient to reply (used for delivery input). */
+export async function sendForceReply(chatId: string | number, text: string): Promise<TelegramResult> {
+  const r = await api("sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    reply_markup: { force_reply: true, input_field_placeholder: "Paste the link or attach a photo" },
+  });
+  return { ok: r.ok, message: r.description };
 }
 
 /** Forward an already-uploaded photo (by its Telegram file_id) to a chat. */
