@@ -75,6 +75,7 @@ export function ShopClient({
   const [name, setName] = useState("");
   const [phoneIn, setPhoneIn] = useState("");
   const [note, setNote] = useState("");
+  const [location, setLocation] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<PlaceOrderResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -139,13 +140,17 @@ export function ShopClient({
     if (!name.trim() || !phoneIn.trim()) { setErr("Please enter your name and phone number."); return; }
     setSubmitting(true);
     try {
-      const res = await placeWebOrderAction({ name, phone: phoneIn, note, items: cartLines.map((l) => ({ productId: l.product.id, qty: l.qty })) });
+      const res = await placeWebOrderAction({ name, phone: phoneIn, note, location, items: cartLines.map((l) => ({ productId: l.product.id, qty: l.qty })) });
       if (!res.ok) { setErr(res.error ?? "Something went wrong. Please try again."); return; }
       if (!res.usesBot && res.orderText) {
         try { await navigator.clipboard.writeText(res.orderText); } catch { /* ignore */ }
       }
       setDone(res);
       setCart({});
+      // Take the customer straight to the bot to pay — no extra tap needed.
+      if (res.usesBot && res.telegramLink) {
+        setTimeout(() => { window.location.href = res.telegramLink!; }, 400);
+      }
     } catch {
       setErr("Couldn't place the order. Please try again.");
     } finally {
@@ -166,7 +171,7 @@ export function ShopClient({
           <p className="text-gold-soft num mt-1">{done.number}</p>
           <p className="text-mist text-sm mt-4">
             {done.usesBot
-              ? "Tap below to open our Telegram bot — it'll show your order and the QR code to pay."
+              ? "Taking you to our Telegram bot to pay… If it doesn't open, tap below."
               : done.telegramLink
               ? "Tap below to open our Telegram — your order is copied, just paste and send."
               : "We'll contact you on the phone number you provided."}
@@ -405,6 +410,7 @@ export function ShopClient({
 
       {cartOpen && <CartDrawer lines={cartLines} total={total} setQty={setQty} onClose={() => setCartOpen(false)}
         name={name} setName={setName} phone={phoneIn} setPhone={setPhoneIn} note={note} setNote={setNote}
+        location={location} setLocation={setLocation}
         submitting={submitting} err={err} placeOrder={placeOrder} telegramReady={telegramReady} />}
     </main>
   );
@@ -482,11 +488,22 @@ function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, to
   );
 }
 
-function CartDrawer({ lines, total, setQty, onClose, name, setName, phone, setPhone, note, setNote, submitting, err, placeOrder, telegramReady }: {
+function CartDrawer({ lines, total, setQty, onClose, name, setName, phone, setPhone, note, setNote, location, setLocation, submitting, err, placeOrder, telegramReady }: {
   lines: { product: ShopProduct; qty: number }[]; total: number; setQty: (id: number, q: number) => void; onClose: () => void;
   name: string; setName: (s: string) => void; phone: string; setPhone: (s: string) => void; note: string; setNote: (s: string) => void;
+  location: string; setLocation: (s: string) => void;
   submitting: boolean; err: string | null; placeOrder: () => void; telegramReady: boolean;
 }) {
+  const [locating, setLocating] = useState(false);
+  function useMyLocation() {
+    if (!navigator.geolocation) { setLocation("Location not supported — please type your address."); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setLocation(`https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`); setLocating(false); },
+      () => { setLocating(false); },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-stretch sm:justify-end">
       <div className="absolute inset-0 bg-black/80 animate-fadein" onClick={() => !submitting && onClose()} />
@@ -525,6 +542,16 @@ function CartDrawer({ lines, total, setQty, onClose, name, setName, phone, setPh
             <div className="space-y-3">
               <label className="field"><span>Your name *</span><input value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Name" /></label>
               <label className="field"><span>Phone / Telegram *</span><input value={phone} onChange={(e) => setPhone(e.target.value)} className="input num" placeholder="e.g. 012 345 678" /></label>
+              <div className="field">
+                <span>Delivery location</span>
+                <div className="flex gap-2">
+                  <input value={location} onChange={(e) => setLocation(e.target.value)} className="input flex-1" placeholder="Address or paste a Google Maps link" />
+                  <button type="button" onClick={useMyLocation} disabled={locating} className="btn-ghost px-3 py-2 text-[12px] shrink-0 whitespace-nowrap disabled:opacity-60">
+                    📍 {locating ? "…" : "Use my location"}
+                  </button>
+                </div>
+                {location.startsWith("http") && <a href={location} target="_blank" rel="noopener" className="text-[11px] text-gold-dim hover:text-gold mt-1 inline-block">Location pinned ✓ — preview map</a>}
+              </div>
               <label className="field"><span>Note (optional)</span><input value={note} onChange={(e) => setNote(e.target.value)} className="input" placeholder="Anything we should know?" /></label>
             </div>
             {err && <p className="text-ruby text-[12px] bg-ruby/10 border border-ruby/25 rounded-lg px-3 py-2 mt-3">{err}</p>}

@@ -255,6 +255,7 @@ CREATE TABLE IF NOT EXISTS web_orders (
   total INTEGER NOT NULL,           -- cents
   status TEXT NOT NULL DEFAULT 'new', -- new | contacted | paid | fulfilled | cancelled
   customer_chat_id TEXT,            -- Telegram chat the customer opened the order in
+  location TEXT,                    -- customer's address / Google Maps link
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS web_order_items (
@@ -303,6 +304,8 @@ function migrate(db: DbConn) {
   // they send can be matched to the order and forwarded to the shop.
   if (cols("web_orders").length && !cols("web_orders").includes("customer_chat_id"))
     db.exec(`ALTER TABLE web_orders ADD COLUMN customer_chat_id TEXT`);
+  if (cols("web_orders").length && !cols("web_orders").includes("location"))
+    db.exec(`ALTER TABLE web_orders ADD COLUMN location TEXT`);
   // AI usage is tracked per provider (Gemini, Groq…). Older DBs had a single
   // per-day counter; give those rows a provider so the battery meters work.
   if (!cols("ai_usage").includes("provider")) {

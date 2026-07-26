@@ -13,6 +13,7 @@ export interface PlaceOrderInput {
   name: string;
   phone: string;
   note?: string;
+  location?: string; // address or a Google Maps link
   items: WebOrderLine[];
 }
 export interface PlaceOrderResult {
@@ -33,6 +34,7 @@ export async function placeWebOrderAction(input: PlaceOrderInput): Promise<Place
   const name = (input.name ?? "").trim();
   const phone = (input.phone ?? "").trim();
   const note = (input.note ?? "").trim() || null;
+  const location = (input.location ?? "").trim().slice(0, 500) || null;
 
   if (!name) return { ok: false, error: "Please enter your name." };
   if (!phone) return { ok: false, error: "Please enter your phone number." };
@@ -55,8 +57,8 @@ export async function placeWebOrderAction(input: PlaceOrderInput): Promise<Place
 
   const orderId = db.transaction(() => {
     const r = db
-      .prepare("INSERT INTO web_orders (number, customer_name, customer_phone, note, total, status, created_at) VALUES (?,?,?,?,?, 'new', ?)")
-      .run(number, name, phone, note, total, ts());
+      .prepare("INSERT INTO web_orders (number, customer_name, customer_phone, note, total, status, location, created_at) VALUES (?,?,?,?,?, 'new', ?, ?)")
+      .run(number, name, phone, note, total, location, ts());
     const id = Number(r.lastInsertRowid);
     const ins = db.prepare("INSERT INTO web_order_items (order_id, product_id, name, qty, unit_price) VALUES (?,?,?,?,?)");
     for (const l of resolved) ins.run(id, l.id, l.name, l.qty, l.price);
@@ -70,6 +72,7 @@ export async function placeWebOrderAction(input: PlaceOrderInput): Promise<Place
     `🛒 New order ${number} — ${brand.name}`,
     `Name: ${name}`,
     `Phone: ${phone}`,
+    ...(location ? [`Location: ${location}`] : []),
     ...(note ? [`Note: ${note}`] : []),
     ``,
     ...lines,
@@ -79,15 +82,23 @@ export async function placeWebOrderAction(input: PlaceOrderInput): Promise<Place
     `Please advise payment. Thank you!`,
   ].join("\n");
 
+  const locText = location
+    ? /^https?:\/\//i.test(location)
+      ? `📍 <a href="${esc(location)}">Open location</a>`
+      : `📍 ${esc(location)}`
+    : "";
   const html = [
-    `🛒 <b>New order ${esc(number)}</b>`,
+    `🔔 <b>NEW ORDER — ${esc(number)}</b>`,
     `👤 <b>${esc(name)}</b>`,
     `📞 ${esc(phone)}`,
+    ...(locText ? [locText] : []),
     ...(note ? [`📝 ${esc(note)}`] : []),
     ``,
     ...resolved.map((l) => `• ${l.qty} × ${esc(l.name)} — <b>${money(l.price * l.qty)}</b>`),
     ``,
     `💰 <b>Total: ${money(total)}</b>`,
+    ``,
+    `The customer is being taken to the bot to pay.`,
   ].join("\n");
 
   // Notify the shop's own Telegram straight away (even if the customer never

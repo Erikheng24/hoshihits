@@ -91,6 +91,15 @@ export default function WebOrdersPage({ searchParams }: { searchParams: { status
                   <Badge tone={tone as any}>{o.status.toUpperCase()}</Badge>
                 </div>
 
+                {o.location && (
+                  <p className="text-[12px] mt-2">
+                    {/^https?:\/\//i.test(o.location) ? (
+                      <a href={o.location} target="_blank" rel="noopener" className="text-gold-dim hover:text-gold">📍 Open delivery location</a>
+                    ) : (
+                      <span className="text-mist">📍 {o.location}</span>
+                    )}
+                  </p>
+                )}
                 {o.note && <p className="text-[12px] text-fog mt-2 italic">“{o.note}”</p>}
 
                 <div className="mt-3 border-t border-dashed border-edge pt-2 space-y-1">

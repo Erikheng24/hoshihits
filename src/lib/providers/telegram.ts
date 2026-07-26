@@ -53,7 +53,7 @@ export function webhookSecret(): string {
   return crypto.createHmac("sha256", base).update("telegram-webhook").digest("hex").slice(0, 40);
 }
 
-type InlineKeyboard = { inline_keyboard: { text: string; url?: string; callback_data?: string }[][] };
+type InlineKeyboard = { inline_keyboard: { text: string; url?: string; callback_data?: string; web_app?: { url: string } }[][] };
 
 async function api(method: string, body: unknown): Promise<{ ok: boolean; result?: unknown; description?: string }> {
   const { botToken } = getTelegramConfig();

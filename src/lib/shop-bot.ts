@@ -57,9 +57,10 @@ export async function sendCustomerOrder(chatId: string | number, orderNumber: st
   }
 
   const link = adminChatLink();
-  await sendMessageTo(chatId, "Tap below once you've paid, or to talk to us 👇", {
+  const base = (setting("app_base_url") || process.env.APP_BASE_URL || "https://hoshihits.onrender.com").replace(/\/+$/, "");
+  await sendMessageTo(chatId, "After you pay, tap the button to send your payment photo 👇", {
     inline_keyboard: [
-      [{ text: "✅ I've paid — send screenshot", callback_data: `paid:${o.number}` }],
+      [{ text: "📸 Submit payment photo", web_app: { url: `${base}/pay-proof?order=${encodeURIComponent(o.number)}` } }],
       link ? [{ text: "💬 Contact admin", url: link }] : [{ text: "💬 Contact admin", callback_data: `contact:${o.number}` }],
     ],
   });
@@ -102,6 +103,18 @@ export async function handlePaymentPhoto(chatId: string | number, fileId: string
     ? `📸 <b>Payment proof</b> — order <b>${esc(o.number)}</b>\n👤 ${esc(o.customer_name)} · ${esc(o.customer_phone)}\n💰 <b>${money(o.total)}</b>\nVerify, then mark it Paid in Web Orders.`
     : "📸 <b>Payment proof</b> from a customer (no matching order found).";
   await sendPhotoByFileId(adminChatId, fileId, caption);
+}
+
+/** Forward a payment-proof photo (from the Web App upload) to the shop's admin. */
+export async function forwardPaymentProof(orderNumber: string, dataUrl: string): Promise<{ ok: boolean; message?: string }> {
+  const { adminChatId } = getTelegramConfig();
+  if (!adminChatId) return { ok: false, message: "The shop's Telegram isn't fully set up." };
+  const o = findOrder(orderNumber);
+  const caption = o
+    ? `📸 <b>Payment proof</b> — order <b>${esc(o.number)}</b>\n👤 ${esc(o.customer_name)} · ${esc(o.customer_phone)}\n💰 <b>${money(o.total)}</b>\nVerify, then mark it Paid in Web Orders.`
+    : `📸 <b>Payment proof</b> (order ${esc(orderNumber)})`;
+  const r = await sendPhotoDataUrl(adminChatId, dataUrl, caption);
+  return { ok: r.ok, message: r.message };
 }
 
 /** Customer tapped "Contact admin" (fallback when no @username link is set). */
