@@ -254,6 +254,7 @@ CREATE TABLE IF NOT EXISTS web_orders (
   note TEXT,
   total INTEGER NOT NULL,           -- cents
   status TEXT NOT NULL DEFAULT 'new', -- new | contacted | paid | fulfilled | cancelled
+  customer_chat_id TEXT,            -- Telegram chat the customer opened the order in
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS web_order_items (
@@ -298,6 +299,10 @@ function migrate(db: DbConn) {
   if (!productCols.includes("description")) db.exec(`ALTER TABLE products ADD COLUMN description TEXT`);
   // Preorders can now carry a reference photo of the box/card the customer ordered.
   if (!cols("preorders").includes("image")) db.exec(`ALTER TABLE preorders ADD COLUMN image TEXT`);
+  // Web orders remember the customer's Telegram chat, so payment-proof photos
+  // they send can be matched to the order and forwarded to the shop.
+  if (cols("web_orders").length && !cols("web_orders").includes("customer_chat_id"))
+    db.exec(`ALTER TABLE web_orders ADD COLUMN customer_chat_id TEXT`);
   // AI usage is tracked per provider (Gemini, Groq…). Older DBs had a single
   // per-day counter; give those rows a provider so the battery meters work.
   if (!cols("ai_usage").includes("provider")) {

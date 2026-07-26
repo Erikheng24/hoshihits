@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { webhookSecret, answerCallback, sendMessageTo, getTelegramConfig } from "@/lib/providers/telegram";
-import { sendCustomerOrder, handlePaidClaim, handleContact } from "@/lib/shop-bot";
+import { sendCustomerOrder, handlePaidClaim, handleContact, handlePaymentPhoto } from "@/lib/shop-bot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +42,15 @@ export async function POST(req: Request) {
     const chatId = msg?.chat?.id;
     const text: string = (msg?.text ?? "").trim();
     if (!chatId) return NextResponse.json({ ok: true });
+
+    // A photo (or a photo sent as a file) = payment proof → forward to the shop.
+    const photoId: string | undefined =
+      (Array.isArray(msg?.photo) && msg.photo.length ? msg.photo[msg.photo.length - 1]?.file_id : undefined) ||
+      (msg?.document?.mime_type?.startsWith?.("image/") ? msg.document.file_id : undefined);
+    if (photoId) {
+      await handlePaymentPhoto(chatId, photoId);
+      return NextResponse.json({ ok: true });
+    }
 
     if (text.startsWith("/start")) {
       const payload = text.split(/\s+/)[1] ?? "";

@@ -128,6 +128,16 @@ export async function answerCallback(callbackId: string, text?: string): Promise
   await api("answerCallbackQuery", { callback_query_id: callbackId, ...(text ? { text } : {}) });
 }
 
+/** Forward an already-uploaded photo (by its Telegram file_id) to a chat. */
+export async function sendPhotoByFileId(chatId: string | number, fileId: string, caption?: string): Promise<TelegramResult> {
+  const r = await api("sendPhoto", {
+    chat_id: chatId,
+    photo: fileId,
+    ...(caption ? { caption, parse_mode: "HTML" } : {}),
+  });
+  return { ok: r.ok, message: r.description };
+}
+
 /** Point Telegram at our webhook so the bot can chat with customers. */
 export async function setWebhook(baseUrl: string): Promise<TelegramResult> {
   const url = `${baseUrl.replace(/\/+$/, "")}/api/telegram/webhook`;
