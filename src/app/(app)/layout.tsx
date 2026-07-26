@@ -4,6 +4,7 @@ import { getBranding } from "@/lib/branding";
 import { getDb } from "@/lib/db";
 import { NAV } from "@/lib/nav";
 import { Sidebar, MobileNav, MobileTabBar } from "@/components/Sidebar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { logoutAction } from "@/app/login/actions";
 import { Icon } from "@/components/icons";
 
@@ -32,6 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {brand.name.toUpperCase()}
             </div>
             <div className="flex-1" />
+            {canAccess(user.role, "web-orders") && <NotificationBell />}
             <Link href="/profile" className="flex items-center gap-3 group" title="My profile">
               <span className="text-right leading-tight hidden sm:block">
                 <span className="block text-[13px] text-white group-hover:text-gold-soft transition-colors">{user.name}</span>
