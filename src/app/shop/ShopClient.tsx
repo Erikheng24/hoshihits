@@ -241,6 +241,28 @@ export function ShopClient({
         <div className="rule-gold max-w-4xl mx-auto" />
       </section>
 
+      {/* Category tiles */}
+      <section className="max-w-6xl mx-auto px-5 pt-10">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { key: "sealed", label: "Boxes & Packs", icon: "📦", tint: "from-[#c0392b]/25" },
+            { key: "single", label: "Singles", icon: "🃏", tint: "from-[#2980b9]/25" },
+            { key: "graded", label: "Graded Slabs", icon: "🏆", tint: "from-[#e67e22]/25" },
+            { key: "accessory", label: "Accessories", icon: "✨", tint: "from-[#8e44ad]/25" },
+          ].map((c) => {
+            const n = products.filter((p) => p.category === c.key).length;
+            return (
+              <button key={c.key} onClick={() => { setCat(c.key); setFavOnly(false); scrollToGrid(); }}
+                className={`shop-card card overflow-hidden p-4 sm:p-5 text-center bg-gradient-to-br ${c.tint} to-transparent ${cat === c.key ? "!border-gold/50" : ""}`}>
+                <div className="text-2xl sm:text-3xl mb-1.5 sm:mb-2">{c.icon}</div>
+                <p className="font-display tracking-[0.05em] text-[12px] sm:text-sm text-white leading-tight">{c.label}</p>
+                <p className="text-[10px] sm:text-[11px] text-fog mt-0.5 num">{n} item{n === 1 ? "" : "s"}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       {/* Featured — new arrivals */}
       {!filtering && featured.length > 0 && (
         <section className="max-w-6xl mx-auto px-5 pt-10">

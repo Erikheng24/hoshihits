@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { webhookSecret, answerCallback, sendMessageTo, getTelegramConfig } from "@/lib/providers/telegram";
 import {
   sendCustomerOrder, handlePaidClaim, handleContact, handlePaymentPhoto,
-  approveOrder, promptDelivery, sendDeliveryToCustomer, parseDeliveryOrder,
+  approveOrder, declineOrder, promptDelivery, sendDeliveryToCustomer, parseDeliveryOrder,
 } from "@/lib/shop-bot";
 
 export const runtime = "nodejs";
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
         if (data.startsWith("paid:")) await handlePaidClaim(chatId, data.slice(5));
         else if (data.startsWith("contact:")) await handleContact(chatId, data.slice(8));
         else if (data.startsWith("approve:") && fromAdmin) await approveOrder(data.slice(8));
+        else if (data.startsWith("decline:") && fromAdmin) await declineOrder(data.slice(8));
         else if (data.startsWith("deliver:") && fromAdmin) await promptDelivery(chatId, data.slice(8));
       }
       return NextResponse.json({ ok: true });

@@ -40,37 +40,38 @@ export default function PrintReportPage({ params }: { params: { section: string 
     <div className="min-h-screen bg-[#f3f2ee] text-black py-6 px-3 print:bg-white print:p-0">
       <div className="max-w-[1100px] mx-auto mb-4 flex items-center justify-between gap-3 no-print">
         <a href="/dashboard" className="text-sm text-neutral-600 hover:text-black">← Back to app</a>
-        <PrintButton />
+        <PrintButton fileName={`${brand.name.replace(/[^a-z0-9]+/gi, "-")}-${def.title.replace(/[^a-z0-9]+/gi, "-")}`.toLowerCase()} />
       </div>
 
-      <div className="print-sheet max-w-[1100px] mx-auto bg-white shadow-sm px-8 py-7">
+      <div className="print-sheet max-w-[1100px] mx-auto bg-white shadow-sm px-4 sm:px-8 py-6 sm:py-7">
         {/* Letterhead */}
-        <div className="flex items-start justify-between gap-6 border-b-[3px] border-[#D4AF37] pb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-3 sm:gap-6 border-b-[3px] border-[#D4AF37] pb-4">
           <div className="flex items-center gap-3 min-w-0">
             {setting("logo").startsWith("data:image/") && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={setting("logo")} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+              <img src={setting("logo")} alt="" className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover shrink-0" />
             )}
             <div className="min-w-0">
-              <p className="text-[22px] font-semibold tracking-[0.06em] leading-tight">{brand.name.toUpperCase()}</p>
+              <p className="text-[18px] sm:text-[22px] font-semibold tracking-[0.06em] leading-tight">{brand.name.toUpperCase()}</p>
               {brand.tagline && <p className="text-[12px] text-neutral-500">{brand.tagline}</p>}
               <p className="text-[11px] text-neutral-500 mt-0.5">
                 {[setting("store_address"), setting("store_phone")].filter(Boolean).join("  ·  ")}
               </p>
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-[17px] font-semibold">{def.title}</p>
+          <div className="text-left sm:text-right shrink-0">
+            <p className="text-[16px] sm:text-[17px] font-semibold">{def.title}</p>
             <p className="text-[11px] text-neutral-500 mt-0.5">Generated {ts().slice(0, 16)}</p>
             <p className="text-[11px] text-neutral-500">{rows.length} record{rows.length === 1 ? "" : "s"}</p>
           </div>
         </div>
 
-        {/* Table */}
+        {/* Table — scrolls sideways on phones, full width in print */}
         {rows.length === 0 ? (
           <p className="text-center text-neutral-500 text-sm py-16">Nothing to report yet.</p>
         ) : (
-          <table className="w-full mt-5 border-collapse text-[11.5px]">
+          <div className="overflow-x-auto print:overflow-visible mt-5 -mx-4 sm:mx-0 px-4 sm:px-0">
+          <table className="w-full border-collapse text-[11.5px] min-w-[560px]">
             <thead>
               <tr>
                 {def.thumbnail && <th className="bg-[#1a1a1a] text-white font-semibold px-2.5 py-2 border-b-2 border-[#D4AF37] text-left w-[46px]">Photo</th>}
@@ -124,6 +125,7 @@ export default function PrintReportPage({ params }: { params: { section: string 
               </tfoot>
             )}
           </table>
+          </div>
         )}
 
         <p className="text-[10px] text-neutral-400 mt-6 pt-3 border-t border-neutral-200">

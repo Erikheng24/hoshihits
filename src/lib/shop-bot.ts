@@ -3,14 +3,16 @@ import { getDb } from "./db";
 import { money } from "./format";
 import { sendMessageTo, sendPhotoDataUrl, sendPhotoByFileId, sendForceReply, sendTelegram, adminChatLink, getTelegramConfig } from "./providers/telegram";
 
-/** Inline buttons for an order in the admin chat (approve / send delivery). */
+/** Inline buttons for an order in the admin chat (approve / decline / send delivery). */
 export function adminOrderKeyboard(orderNumber: string, stage: "approve" | "deliver" = "approve") {
   return {
-    inline_keyboard: [
+    inline_keyboard:
       stage === "approve"
-        ? [{ text: "✅ Approve order", callback_data: `approve:${orderNumber}` }]
-        : [{ text: "📦 Send delivery to customer", callback_data: `deliver:${orderNumber}` }],
-    ],
+        ? [
+            [{ text: "✅ Approve order", callback_data: `approve:${orderNumber}` }],
+            [{ text: "❌ Decline / refund", callback_data: `decline:${orderNumber}` }],
+          ]
+        : [[{ text: "📦 Send delivery to customer", callback_data: `deliver:${orderNumber}` }]],
   };
 }
 /** Marker text the delivery force-reply prompt carries, so a reply can be matched to an order. */
@@ -150,6 +152,22 @@ export async function approveOrder(orderNumber: string): Promise<void> {
     await sendMessageTo(o.customer_chat_id, `✅ <b>Your order ${esc(o.number)} is approved!</b>\nThank you — we're packing your order now and will send you delivery details shortly. 📦`);
   }
   await sendTelegram(`✅ <b>Approved ${esc(o.number)}</b> — the customer has been notified.\nWhen it's ready, send the delivery link/receipt 👇`, adminOrderKeyboard(o.number, "deliver"));
+}
+
+/** Admin tapped "Decline / refund" — cancel the order and tell the customer. */
+export async function declineOrder(orderNumber: string): Promise<void> {
+  const db = getDb();
+  const o = db
+    .prepare("SELECT id, number, customer_chat_id FROM web_orders WHERE number = ?")
+    .get(orderNumber) as { id: number; number: string; customer_chat_id: string | null } | undefined;
+  const { adminChatId } = getTelegramConfig();
+  if (!o) { if (adminChatId) await sendTelegram("That order was not found."); return; }
+
+  db.prepare("UPDATE web_orders SET status = 'cancelled' WHERE id = ?").run(o.id);
+  if (o.customer_chat_id) {
+    await sendMessageTo(o.customer_chat_id, `😔 <b>About your order ${esc(o.number)}</b>\nWe're sorry — this order can't be completed and has been cancelled. If you already paid, we'll refund you. Please contact us if you have any questions. 🙏`);
+  }
+  if (adminChatId) await sendTelegram(`❌ <b>${esc(o.number)} declined</b> — the customer has been notified. Remember to refund them if they already paid.`);
 }
 
 /** Admin tapped "Send delivery" — ask them to reply with the link/photo. */
