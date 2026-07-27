@@ -10,7 +10,7 @@ import type { ItemKind, ScanFields, EnrichResult } from "@/lib/scan";
 import type { QuickAddInput, PhotoIdResult } from "@/app/(app)/inventory/enrich";
 
 type EnrichFn = (kind: ItemKind, code: string, game?: string) => Promise<EnrichResult>;
-type QuickAddFn = (input: QuickAddInput) => Promise<{ ok: boolean; error?: string; id?: number; sku?: string }>;
+type QuickAddFn = (input: QuickAddInput) => Promise<{ ok: boolean; error?: string; id?: number; sku?: string; merged?: boolean; stock?: number }>;
 type IdentifyFn = (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
 
 const TYPES: { id: string; kind: ItemKind; label: string; hint: string; icon: string }[] = [
@@ -61,7 +61,7 @@ export function UnifiedScanner({
   const [notes, setNotes] = useState("");
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<{ sku: string } | null>(null);
+  const [saved, setSaved] = useState<{ sku: string; merged?: boolean; stock?: number } | null>(null);
   const [usage, setUsage] = useState(initialUsage ?? null);
 
   const stopCamera = useCallback(() => {
@@ -234,7 +234,7 @@ export function UnifiedScanner({
     });
     setSaving(false);
     if (!res.ok) { setSaveErr(res.error ?? "Save failed."); return; }
-    setSaved({ sku: res.sku! });
+    setSaved({ sku: res.sku!, merged: res.merged, stock: res.stock });
     setPhase("done");
     router.refresh();
   }
@@ -257,7 +257,7 @@ export function UnifiedScanner({
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display text-lg tracking-wide text-white flex items-center gap-2">
             <Icon name="scan" className="w-5 h-5 text-gold" />
-            {phase === "type" ? "Scan to add" : phase === "done" ? "Added" : typeLabel}
+            {phase === "type" ? "Scan to add" : phase === "done" ? (saved?.merged ? "Stock updated" : "Added") : typeLabel}
           </h3>
           <button onClick={onClose} className="text-fog hover:text-white"><Icon name="x" className="w-5 h-5" /></button>
         </div>
@@ -444,7 +444,11 @@ export function UnifiedScanner({
               <Icon name="check" className="w-6 h-6" />
             </span>
             <p className="text-white text-lg">{fields.name}</p>
-            <p className="text-fog num mt-1">Added as {saved.sku}</p>
+            {saved.merged ? (
+              <p className="text-fog num mt-1">Already in stock — added to <span className="text-gold-soft">{saved.sku}</span> · now {saved.stock} in stock</p>
+            ) : (
+              <p className="text-fog num mt-1">Added as {saved.sku}</p>
+            )}
             <div className="flex items-center justify-center gap-2 mt-6">
               <button onClick={onClose} className="btn-ghost px-4 py-2.5 text-sm">Done</button>
               <button onClick={reset} className="btn-gold px-5 py-2.5 text-sm">

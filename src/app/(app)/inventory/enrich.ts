@@ -85,7 +85,7 @@ export interface QuickAddInput {
 /** Save straight from the scanner's preview card into the catalog. */
 export async function quickAddProductAction(
   input: QuickAddInput
-): Promise<{ ok: boolean; error?: string; id?: number; sku?: string }> {
+): Promise<{ ok: boolean; error?: string; id?: number; sku?: string; merged?: boolean; stock?: number }> {
   const user = requireModule("inventory");
   const db = getDb();
 
@@ -96,12 +96,28 @@ export async function quickAddProductAction(
 
   const category = input.kind === "graded" ? "graded" : input.kind === "raw" ? "single" : "sealed";
   const game = input.game || "Pokémon";
+  const cert = input.cert_number?.trim() || null;
 
   const okData = (input.image ?? "").startsWith("data:image/") && (input.image ?? "").length < 1_400_000;
   const okUrl = /^https:\/\/[^\s"'<>]+$/.test(input.image ?? "") && (input.image ?? "").length < 600;
   const image = okData || okUrl ? input.image! : null;
 
   try {
+    // Don't duplicate: a graded slab with the same cert, or any other item with
+    // the same name/game/type, merges into the existing product (stock += qty).
+    const existing = (
+      category === "graded" && cert
+        ? db.prepare("SELECT id, sku, stock FROM products WHERE cert_number = ? AND active = 1 LIMIT 1").get(cert)
+        : db.prepare("SELECT id, sku, stock FROM products WHERE LOWER(name) = LOWER(?) AND game = ? AND category = ? AND active = 1 LIMIT 1").get(name, game, category)
+    ) as { id: number; sku: string; stock: number } | undefined;
+    if (existing) {
+      const stock = existing.stock + qty;
+      db.prepare("UPDATE products SET stock = ? WHERE id = ?").run(stock, existing.id);
+      // If the existing product has no photo yet, add the one we just scanned.
+      if (image) db.prepare("UPDATE products SET image = COALESCE(NULLIF(image, ''), ?) WHERE id = ?").run(image, existing.id);
+      audit(user.id, "inventory.quick_merge", "product", existing.id, `${existing.sku} — ${name}: stock +${qty} → ${stock}`);
+      return { ok: true, id: existing.id, sku: existing.sku, merged: true, stock };
+    }
     const code =
       { "Pokémon": "PKM", "One Piece": "OPC", "Yu-Gi-Oh!": "YGO", "Weiss Schwarz": "WSC", "Union Arena": "UNA",
         Magic: "MTG", Digimon: "DGM", "Dragon Ball": "DBS", Gundam: "GCG", Accessories: "ACC" }[game] ?? "GEN";

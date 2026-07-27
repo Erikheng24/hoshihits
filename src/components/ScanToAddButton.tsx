@@ -15,7 +15,7 @@ export function ScanToAddButton({
   initialUsage,
 }: {
   enrich: (kind: ItemKind, code: string, game?: string) => Promise<EnrichResult>;
-  quickAdd: (input: QuickAddInput) => Promise<{ ok: boolean; error?: string; id?: number; sku?: string }>;
+  quickAdd: (input: QuickAddInput) => Promise<{ ok: boolean; error?: string; id?: number; sku?: string; merged?: boolean; stock?: number }>;
   identify: (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
   games: string[];
   initialUsage?: AiUsageLike;
