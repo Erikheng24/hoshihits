@@ -13,10 +13,11 @@ type EnrichFn = (kind: ItemKind, code: string, game?: string) => Promise<EnrichR
 type QuickAddFn = (input: QuickAddInput) => Promise<{ ok: boolean; error?: string; id?: number; sku?: string }>;
 type IdentifyFn = (dataUrl: string, gameHint?: string) => Promise<PhotoIdResult>;
 
-const TYPES: { kind: ItemKind; label: string; hint: string; icon: string }[] = [
-  { kind: "raw", label: "Raw Card", hint: "Photograph the card — AI reads name, set & price", icon: "card" },
-  { kind: "graded", label: "Graded Slab", hint: "Photograph the slab — AI reads name, grade & cert", icon: "graded" },
-  { kind: "sealed", label: "Booster Box / Pack", hint: "Photograph the box — AI reads name & set", icon: "inventory" },
+const TYPES: { id: string; kind: ItemKind; label: string; hint: string; icon: string }[] = [
+  { id: "raw", kind: "raw", label: "Raw Card", hint: "Photograph the card — AI reads name, set & price", icon: "card" },
+  { id: "graded", kind: "graded", label: "Graded Slab", hint: "Photograph the slab — AI reads name, grade & cert", icon: "graded" },
+  { id: "sealed", kind: "sealed", label: "Booster Box", hint: "Photograph the box — AI reads name & set", icon: "inventory" },
+  { id: "pack", kind: "sealed", label: "Booster Pack", hint: "Photograph the pack — AI reads name & set", icon: "inventory" },
 ];
 
 export function UnifiedScanner({
@@ -41,7 +42,8 @@ export function UnifiedScanner({
   const router = useRouter();
 
   const [phase, setPhase] = useState<"type" | "camera" | "working" | "preview" | "done">("type");
-  const [kind, setKind] = useState<ItemKind>("raw");
+  const [typeId, setTypeId] = useState("raw");
+  const kind: ItemKind = TYPES.find((t) => t.id === typeId)?.kind ?? "raw";
   const [game, setGame] = useState("Pokémon");
   const [camError, setCamError] = useState<string | null>(null);
   const [status, setStatus] = useState("");
@@ -245,7 +247,7 @@ export function UnifiedScanner({
     setSaveErr(null); setSaved(null);
   }
 
-  const typeLabel = TYPES.find((t) => t.kind === kind)!.label;
+  const typeLabel = TYPES.find((t) => t.id === typeId)?.label ?? "Scan";
 
   return (
     <Portal>
@@ -269,8 +271,8 @@ export function UnifiedScanner({
             <div className="space-y-2">
               {TYPES.map((t) => (
                 <button
-                  key={t.kind}
-                  onClick={() => { setKind(t.kind); setPhase("camera"); }}
+                  key={t.id}
+                  onClick={() => { setTypeId(t.id); setPhase("camera"); }}
                   className="w-full rounded-xl border border-edge hover:border-gold/40 bg-panel-2 hover:bg-gold/[0.06] transition-colors p-4 flex items-center gap-4 text-left"
                 >
                   <span className="w-11 h-11 rounded-lg bg-gold/10 border border-gold/25 text-gold flex items-center justify-center shrink-0">

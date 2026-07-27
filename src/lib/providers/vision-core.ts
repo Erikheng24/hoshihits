@@ -26,15 +26,19 @@ export interface ProviderReply {
   text?: string;
   /** true when the failure is worth trying the next provider (quota, network, 5xx). */
   retriable: boolean;
+  /** true when the provider reported a rate/quota limit (HTTP 429) — drains its battery. */
+  rateLimited?: boolean;
   message?: string;
 }
 
-export const PROMPT = `You are an expert trading-card inventory assistant.
+export const PROMPT = `You are an expert trading-card inventory assistant for ALL trading card games — not just Pokémon.
 Identify the single most prominent item in the photo: a raw card, a graded slab, or a sealed product (booster box, booster pack, elite trainer box, tin, etc.).
 
 CRITICAL RULES:
-- ALWAYS give the NAME AND SET IN ENGLISH, even when the item itself is printed in Japanese or another language. Translate/convert to the standard English card name and English set/expansion name (e.g. a Japanese リザードンex card → "Charizard ex"; a Japanese 変幻の仮面 set → "Twilight Masquerade"). Never output Japanese, Chinese, or Korean characters in the name or set — English only.
-- Read the text and symbols printed on the item to identify it, then give the English name.
+- Recognise EVERY trading card game equally well: Pokémon, the One Piece Card Game (Bandai), Dragon Ball Super, Digimon, Yu-Gi-Oh!, Union Arena, Weiss Schwarz, Gundam, and Magic. NEVER refuse or return identified:false just because a card is not Pokémon — identify it anyway.
+- How to tell the game apart: One Piece cards have a coloured frame, a power/cost number in a bubble, "ONE PIECE CARD GAME" text or the straw-hat/Devil-Fruit logo, and codes like OP01-001, ST01-001, EB01-001, PRB01-001 (leaders say "LEADER"). Dragon Ball Super shows a large power number and "SUPER" / "FUSION WORLD". Yu-Gi-Oh! has ATK/DEF and a set code like ROTA-EN001. Use the frame, logos and codes to decide.
+- ALWAYS give the NAME AND SET IN ENGLISH, even when the item is printed in Japanese or another language. Translate to the standard English name and set (e.g. リザードンex → "Charizard ex"; 変幻の仮面 → "Twilight Masquerade"; a Japanese One Piece "モンキー・D・ルフィ" → "Monkey.D.Luffy"). Never output Japanese, Chinese, or Korean characters in the name or set — English only.
+- Read the text, symbols, frame and logos printed on the item to identify it, then give the English name.
 - Always give your best answer. Set identified to false ONLY if the photo is unreadable or clearly not a trading-card product.
 
 Fields:
@@ -43,8 +47,8 @@ Fields:
 - name: the card or product name IN ENGLISH (translate if the print is Japanese/other), e.g. "Charizard ex", "Surging Sparks Booster Box".
 - set: the set / expansion name IN ENGLISH, e.g. "Surging Sparks", "Twilight Masquerade". Give the era in English if you truly can't identify the set.
 - game: the TCG — Pokémon, One Piece, Yu-Gi-Oh!, Weiss Schwarz, Union Arena, Magic, Digimon, Dragon Ball, or Gundam.
-- rarity: for a raw card, the rarity code printed (AR, SAR, SR, SIR, UR, RRR, CHR, CSR, SSR...); blank for sealed/graded.
-- cardNumber: the collector number like 073/064 if visible.
+- rarity: for a raw card, the rarity code printed. Pokémon: AR, SAR, SR, SIR, UR, RRR, CHR, CSR, SSR. One Piece: L (Leader), C, UC, R, SR, SEC, P (Promo), SP, or a "Manga"/alt-art note. Yu-Gi-Oh!: C, R, SR, UR, ScR, QCSR. Blank for sealed/graded.
+- cardNumber: the collector number printed — e.g. 073/064 (Pokémon), OP05-060 or ST01-001 (One Piece), ROTA-EN001 (Yu-Gi-Oh!).
 - language: the language printed on the physical item (Japanese, English, Chinese, Korean...). This is just a note — the name/set above must still be English.
 
 For a GRADED slab, ALWAYS read the grading label (usually English, along the top of the case) — a slab always has a card name and a grade, so never leave them blank:

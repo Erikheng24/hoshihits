@@ -1,5 +1,5 @@
 import "server-only";
-import { recordAiScan, AI_PROVIDERS } from "@/lib/db";
+import { recordAiScan, markRateLimited, AI_PROVIDERS } from "@/lib/db";
 import { buildVisionId, type VisionId } from "./vision-core";
 import { callGemini } from "./vision-gemini";
 import { callGroq } from "./vision-groq";
@@ -44,7 +44,8 @@ export async function identifyPhoto(dataUrl: string, gameHint?: string): Promise
 
   for (const provider of active) {
     const reply = await provider.call(dataUrl, gameHint);
-    recordAiScan(provider.id); // a request was sent — count it against this provider's quota
+    if (reply.rateLimited) markRateLimited(provider.id); // 429 → battery goes red
+    else recordAiScan(provider.id); // a real request — count it against this provider's quota
 
     if (!reply.ok) {
       if (reply.message) lastMessage = reply.message;

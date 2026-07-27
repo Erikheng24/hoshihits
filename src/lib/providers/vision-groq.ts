@@ -51,7 +51,7 @@ export async function callGroq(dataUrl: string, gameHint?: string): Promise<Prov
       signal: AbortSignal.timeout(25000),
     });
 
-    if (res.status === 429) return { ok: false, retriable: true, message: "Groq rate limit." };
+    if (res.status === 429) return { ok: false, retriable: true, rateLimited: true, message: "Groq rate limit." };
     if (res.status === 401 || res.status === 403)
       return { ok: false, retriable: false, message: "Groq rejected the request — check GROQ_API_KEY." };
     if (!res.ok) return { ok: false, retriable: true, message: `Groq error ${res.status}.` };

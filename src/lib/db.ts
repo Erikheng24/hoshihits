@@ -495,6 +495,17 @@ export const AI_PROVIDERS: { id: string; label: string; limitEnv: string; defaul
   { id: "groq", label: "Groq", limitEnv: "GROQ_DAILY_LIMIT", defaultLimit: 1000, configured: () => process.env.GROQ_ENABLED === "1" && !!process.env.GROQ_API_KEY },
 ];
 
+/** A provider's daily limit (env override, legacy setting for Gemini, or default). */
+function providerLimit(providerId: string): number {
+  const p = AI_PROVIDERS.find((x) => x.id === providerId);
+  if (!p) return 1;
+  const legacy =
+    providerId === "gemini"
+      ? Number((getDb().prepare("SELECT value FROM settings WHERE key = 'ai_daily_limit'").get() as { value: string } | undefined)?.value)
+      : 0;
+  return Math.max(1, legacy || Number(process.env[p.limitEnv]) || p.defaultLimit);
+}
+
 /** Count one AI photo scan against today's quota for a given provider. */
 export function recordAiScan(provider = "gemini"): void {
   getDb()
@@ -502,6 +513,21 @@ export function recordAiScan(provider = "gemini"): void {
       "INSERT INTO ai_usage (day, provider, count) VALUES (?, ?, 1) ON CONFLICT(day, provider) DO UPDATE SET count = count + 1"
     )
     .run(today(), provider);
+}
+
+/**
+ * The provider reported a rate/quota limit (HTTP 429). Drain its battery to
+ * empty for the rest of the day so the meter turns red — the local scan counter
+ * doesn't always match the provider's real limits (per-minute or per-day), so a
+ * 429 is the source of truth that it's out.
+ */
+export function markRateLimited(provider = "gemini"): void {
+  const limit = providerLimit(provider);
+  getDb()
+    .prepare(
+      "INSERT INTO ai_usage (day, provider, count) VALUES (?, ?, ?) ON CONFLICT(day, provider) DO UPDATE SET count = MAX(count, ?)"
+    )
+    .run(today(), provider, limit, limit);
 }
 
 /** Today's per-provider AI scan counts and daily limits (reset each day). */
@@ -513,18 +539,12 @@ export function getAiUsage(): AiUsage {
   }[];
   const byProvider = new Map(rows.map((r) => [r.provider, r.count]));
 
-  // A configurable override for Gemini's limit kept from the earlier single-provider setting.
-  const legacySetting = db.prepare("SELECT value FROM settings WHERE key = 'ai_daily_limit'").get() as
-    | { value: string }
-    | undefined;
-
   const providers: ProviderUsage[] = AI_PROVIDERS.map((p) => {
-    const override = p.id === "gemini" ? Number(legacySetting?.value) : 0;
-    const limit = Math.max(1, override || Number(process.env[p.limitEnv]) || p.defaultLimit);
+    const limit = providerLimit(p.id);
     return {
       id: p.id,
       label: p.label,
-      used: byProvider.get(p.id) ?? 0,
+      used: Math.min(byProvider.get(p.id) ?? 0, limit),
       limit,
       configured: p.configured(),
     };

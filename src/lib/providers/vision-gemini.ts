@@ -67,7 +67,7 @@ export async function callGemini(dataUrl: string, gameHint?: string, apiKey?: st
       }
     );
 
-    if (res.status === 429) return { ok: false, retriable: true, message: "Gemini rate limit." };
+    if (res.status === 429) return { ok: false, retriable: true, rateLimited: true, message: "Gemini rate limit." };
     if (res.status === 400 || res.status === 403)
       return { ok: false, retriable: false, message: "Gemini rejected the request — check GEMINI_API_KEY." };
     if (!res.ok) return { ok: false, retriable: true, message: `Gemini error ${res.status}.` };
