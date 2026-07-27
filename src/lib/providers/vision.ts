@@ -1,5 +1,5 @@
 import "server-only";
-import { recordAiScan, markRateLimited, AI_PROVIDERS } from "@/lib/db";
+import { recordAiScan, markRateLimited, getAiUsage, AI_PROVIDERS } from "@/lib/db";
 import { buildVisionId, type VisionId } from "./vision-core";
 import { callGemini } from "./vision-gemini";
 import { callGroq } from "./vision-groq";
@@ -28,7 +28,15 @@ const CALLERS: { id: string; call: Caller }[] = [
 export type { VisionId };
 
 export async function identifyPhoto(dataUrl: string, gameHint?: string): Promise<VisionId> {
-  const active = CALLERS.filter((p) => AI_PROVIDERS.find((x) => x.id === p.id)?.configured());
+  const configured = CALLERS.filter((p) => AI_PROVIDERS.find((x) => x.id === p.id)?.configured());
+
+  // Skip keys that already hit their daily limit today (battery empty) so a scan
+  // goes straight to a working key instead of wasting a slow 429 on the dead one.
+  // Exhausted keys are kept as a last resort (in case a per-minute limit reset).
+  const usage = getAiUsage();
+  const exhausted = new Set(usage.providers.filter((p) => p.used >= p.limit).map((p) => p.id));
+  const fresh = configured.filter((p) => !exhausted.has(p.id));
+  const active = fresh.length ? [...fresh, ...configured.filter((p) => exhausted.has(p.id))] : configured;
 
   if (active.length === 0) {
     return {
