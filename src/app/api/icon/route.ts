@@ -24,6 +24,12 @@ export async function GET() {
     /* fall through to the default */
   }
   try {
+    const png = fs.readFileSync(path.join(process.cwd(), "public", "icon.png"));
+    return new NextResponse(png, { headers: { "content-type": "image/png", "cache-control": "public, max-age=300" } });
+  } catch {
+    /* fall through to the legacy SVG */
+  }
+  try {
     const svg = fs.readFileSync(path.join(process.cwd(), "public", "icon.svg"));
     return new NextResponse(svg, { headers: { "content-type": "image/svg+xml", "cache-control": "public, max-age=300" } });
   } catch {

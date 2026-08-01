@@ -25,7 +25,7 @@ export function generateMetadata(): Metadata {
     description: "HoshiHits Card Shop — ERP + POS operating system for trading card games",
     manifest: "/manifest.json",
     icons: {
-      icon: [{ url: icon }, { url: "/icon.svg", type: "image/svg+xml" }],
+      icon: [{ url: icon }, { url: "/icon.png", type: "image/png" }, { url: "/icon.svg", type: "image/svg+xml" }],
       apple: [{ url: icon }],
       shortcut: [{ url: icon }],
     },
