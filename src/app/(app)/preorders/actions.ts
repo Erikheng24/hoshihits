@@ -65,3 +65,17 @@ export async function cancelPreorderAction(formData: FormData) {
   revalidatePath("/preorders");
   redirect("/preorders");
 }
+
+/** Permanently remove a preorder — for fixing a wrong entry (a customer's extra
+ *  line that shouldn't exist). Unlike cancel, this deletes the row entirely. */
+export async function deletePreorderAction(formData: FormData) {
+  const user = requireModule("preorders");
+  const db = getDb();
+  const id = Number(formData.get("id"));
+  const p = db.prepare("SELECT number, product_name FROM preorders WHERE id=?").get(id) as { number: string; product_name: string } | undefined;
+  if (!p) throw new Error("Preorder not found.");
+  db.prepare("DELETE FROM preorders WHERE id=?").run(id);
+  audit(user.id, "preorders.delete", "preorder", id, `${p.number} — ${p.product_name} (removed)`);
+  revalidatePath("/preorders");
+  redirect("/preorders");
+}

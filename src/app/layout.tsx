@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: "HoshiHits — Card Shop ERP",
   description: "HoshiHits Card Shop — ERP + POS operating system for trading card games",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/api/icon" }, { url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/api/icon" }],
+    shortcut: [{ url: "/api/icon" }],
+  },
 };
 
 export const viewport: Viewport = {

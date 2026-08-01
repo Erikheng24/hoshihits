@@ -8,7 +8,7 @@ import { Icon } from "@/components/icons";
 import { SearchToolbar } from "@/components/SearchToolbar";
 import { GAMES } from "@/components/InventoryView";
 import { PreorderPhotoField } from "@/components/PreorderPhotoField";
-import { createPreorderAction, advancePreorderAction, cancelPreorderAction } from "./actions";
+import { createPreorderAction, advancePreorderAction, cancelPreorderAction, deletePreorderAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -136,11 +136,17 @@ export default function PreordersPage({ searchParams }: { searchParams: { q?: st
                     {open && (
                       <form action={cancelPreorderAction} className="inline ml-1">
                         <input type="hidden" name="id" value={p.id} />
-                        <button className="btn-ghost w-7 h-7 !rounded-md text-ruby/70 hover:text-ruby" title="Cancel">
+                        <button className="btn-ghost w-7 h-7 !rounded-md text-amberish/70 hover:text-amberish" title="Cancel (keep record)">
                           <Icon name="x" className="w-3.5 h-3.5" />
                         </button>
                       </form>
                     )}
+                    <form action={deletePreorderAction} className="inline ml-1">
+                      <input type="hidden" name="id" value={p.id} />
+                      <button className="btn-ghost w-7 h-7 !rounded-md text-ruby/70 hover:text-ruby" title="Delete this preorder">
+                        <Icon name="trash" className="w-3.5 h-3.5" />
+                      </button>
+                    </form>
                   </td>
                 </tr>
               );
