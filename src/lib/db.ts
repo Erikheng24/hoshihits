@@ -107,6 +107,19 @@ CREATE TABLE IF NOT EXISTS preorders (
   user_id INTEGER REFERENCES users(id),
   created_at TEXT NOT NULL
 );
+-- A preorder can hold several items (a customer reserving 5–6 boxes/cards at
+-- once). Legacy single-item columns on preorders stay as a summary; the real
+-- lines live here.
+CREATE TABLE IF NOT EXISTS preorder_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  preorder_id INTEGER NOT NULL REFERENCES preorders(id),
+  product_name TEXT NOT NULL,
+  game TEXT,
+  qty INTEGER NOT NULL DEFAULT 1,
+  unit_price INTEGER NOT NULL,     -- cents
+  image TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_preorder_items ON preorder_items(preorder_id);
 
 CREATE TABLE IF NOT EXISTS suppliers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -300,6 +313,25 @@ function migrate(db: DbConn) {
   if (!productCols.includes("description")) db.exec(`ALTER TABLE products ADD COLUMN description TEXT`);
   // Preorders can now carry a reference photo of the box/card the customer ordered.
   if (!cols("preorders").includes("image")) db.exec(`ALTER TABLE preorders ADD COLUMN image TEXT`);
+  // Multi-item preorders: header gains a total; existing single-item preorders
+  // are copied into preorder_items once so the new UI shows them as line items.
+  if (!cols("preorders").includes("total")) db.exec(`ALTER TABLE preorders ADD COLUMN total INTEGER`);
+  if (cols("preorders").length && cols("preorder_items").length) {
+    const legacy = db
+      .prepare(
+        `SELECT p.id, p.product_name, p.game, p.qty, p.unit_price, p.image
+         FROM preorders p WHERE NOT EXISTS (SELECT 1 FROM preorder_items i WHERE i.preorder_id = p.id)`
+      )
+      .all() as { id: number; product_name: string; game: string | null; qty: number; unit_price: number; image: string | null }[];
+    const insItem = db.prepare(
+      "INSERT INTO preorder_items (preorder_id, product_name, game, qty, unit_price, image) VALUES (?,?,?,?,?,?)"
+    );
+    const setTotal = db.prepare("UPDATE preorders SET total = ? WHERE id = ?");
+    for (const p of legacy) {
+      insItem.run(p.id, p.product_name, p.game, p.qty, p.unit_price, p.image);
+      setTotal.run((p.qty || 0) * (p.unit_price || 0), p.id);
+    }
+  }
   // Web orders remember the customer's Telegram chat, so payment-proof photos
   // they send can be matched to the order and forwarded to the shop.
   if (cols("web_orders").length && !cols("web_orders").includes("customer_chat_id"))

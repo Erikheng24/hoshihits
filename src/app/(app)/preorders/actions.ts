@@ -5,36 +5,69 @@ import { redirect } from "next/navigation";
 import { getDb, audit, nextNumber, ts } from "@/lib/db";
 import { requireModule } from "@/lib/auth";
 
-export async function createPreorderAction(formData: FormData) {
+export interface PreorderItemInput {
+  product_name: string;
+  game?: string;
+  qty: number;
+  unitPriceCents: number;
+  image?: string;
+}
+export interface CreatePreorderInput {
+  customerId: number;
+  expectedDate?: string;
+  depositCents: number;
+  items: PreorderItemInput[];
+}
+
+/** Create a multi-item preorder (a customer reserving several boxes/cards). */
+export async function createPreorderAction(
+  input: CreatePreorderInput
+): Promise<{ ok: boolean; error?: string; id?: number; number?: string }> {
   const user = requireModule("preorders");
   const db = getDb();
-  const customerId = Number(formData.get("customer_id"));
-  const productName = String(formData.get("product_name") ?? "").trim();
-  const game = String(formData.get("game") ?? "").trim() || null;
-  const qty = Math.max(1, Math.round(Number(formData.get("qty") ?? 1)));
-  const unitPrice = Math.round((parseFloat(String(formData.get("unit_price") ?? "0")) || 0) * 100);
-  const deposit = Math.round((parseFloat(String(formData.get("deposit") ?? "0")) || 0) * 100);
-  const expected = String(formData.get("expected_date") ?? "").trim() || null;
+  if (!input.customerId) return { ok: false, error: "Customer is required." };
 
-  // Optional reference photo of the ordered box/card (data URL from the picker).
-  const rawImage = String(formData.get("image") ?? "");
-  const image = rawImage.startsWith("data:image/") && rawImage.length < 1_400_000 ? rawImage : null;
+  const items = (input.items ?? [])
+    .map((it) => ({
+      product_name: (it.product_name ?? "").trim(),
+      game: (it.game ?? "").trim() || null,
+      qty: Math.max(1, Math.round(it.qty || 1)),
+      unit_price: Math.max(0, Math.round(it.unitPriceCents || 0)),
+      image: (it.image ?? "").startsWith("data:image/") && (it.image ?? "").length < 1_400_000 ? it.image! : null,
+    }))
+    .filter((it) => it.product_name && it.unit_price > 0);
+  if (!items.length) return { ok: false, error: "Add at least one item with a name and price." };
 
-  if (!customerId) throw new Error("Customer is required.");
-  if (!productName) throw new Error("Product name is required.");
-  if (unitPrice <= 0) throw new Error("Unit price must be positive.");
-  if (deposit < 0 || deposit > unitPrice * qty) throw new Error("Invalid deposit.");
+  const total = items.reduce((a, it) => a + it.unit_price * it.qty, 0);
+  const deposit = Math.max(0, Math.round(input.depositCents || 0));
+  if (deposit > total) return { ok: false, error: "Deposit can't be more than the total." };
+  const expected = (input.expectedDate ?? "").trim() || null;
 
-  const number = nextNumber("PRE", "preorders", 4);
-  const r = db
-    .prepare(
-      `INSERT INTO preorders (number, customer_id, product_id, product_name, game, qty, unit_price, deposit, status, expected_date, image, user_id, created_at)
-       VALUES (?,?,NULL,?,?,?,?,?, 'pending', ?, ?, ?, ?)`
-    )
-    .run(number, customerId, productName, game, qty, unitPrice, deposit, expected, image, user.id, ts());
-  audit(user.id, "preorders.create", "preorder", Number(r.lastInsertRowid), `${number} — ${productName}`);
-  revalidatePath("/preorders");
-  redirect("/preorders");
+  const customer = db.prepare("SELECT id FROM customers WHERE id=?").get(input.customerId);
+  if (!customer) return { ok: false, error: "Customer not found." };
+
+  try {
+    const number = nextNumber("PRE", "preorders", 4);
+    const id = db.transaction(() => {
+      // Header keeps a summary in the legacy columns; the real lines go in preorder_items.
+      const summary = items.length > 1 ? `${items[0].product_name} +${items.length - 1} more` : items[0].product_name;
+      const totalQty = items.reduce((a, it) => a + it.qty, 0);
+      const r = db
+        .prepare(
+          `INSERT INTO preorders (number, customer_id, product_id, product_name, game, qty, unit_price, deposit, total, status, expected_date, image, user_id, created_at)
+           VALUES (?,?,NULL,?,?,?,?,?,?, 'pending', ?, ?, ?, ?)`
+        )
+        .run(number, input.customerId, summary, items[0].game, totalQty, 0, deposit, total, expected, items[0].image, user.id, ts());
+      const pid = Number(r.lastInsertRowid);
+      const ins = db.prepare("INSERT INTO preorder_items (preorder_id, product_name, game, qty, unit_price, image) VALUES (?,?,?,?,?,?)");
+      for (const it of items) ins.run(pid, it.product_name, it.game, it.qty, it.unit_price, it.image);
+      return pid;
+    })();
+    audit(user.id, "preorders.create", "preorder", id, `${number} — ${items.length} item(s), total ${total / 100}`);
+    return { ok: true, id, number };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Couldn't create the preorder." };
+  }
 }
 
 const FLOW: Record<string, string> = { pending: "arrived", arrived: "ready", ready: "collected" };
@@ -74,7 +107,10 @@ export async function deletePreorderAction(formData: FormData) {
   const id = Number(formData.get("id"));
   const p = db.prepare("SELECT number, product_name FROM preorders WHERE id=?").get(id) as { number: string; product_name: string } | undefined;
   if (!p) throw new Error("Preorder not found.");
-  db.prepare("DELETE FROM preorders WHERE id=?").run(id);
+  db.transaction(() => {
+    db.prepare("DELETE FROM preorder_items WHERE preorder_id=?").run(id);
+    db.prepare("DELETE FROM preorders WHERE id=?").run(id);
+  })();
   audit(user.id, "preorders.delete", "preorder", id, `${p.number} — ${p.product_name} (removed)`);
   revalidatePath("/preorders");
   redirect("/preorders");

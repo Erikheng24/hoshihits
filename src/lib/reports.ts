@@ -174,10 +174,9 @@ export const REPORTS: Record<string, ReportDef> = {
       { key: "number", header: "Preorder", width: 14 },
       { key: "created_at", header: "Taken", type: "datetime", width: 18 },
       { key: "customer", header: "Customer", width: 22 },
-      { key: "product_name", header: "Product", width: 34 },
+      { key: "product_name", header: "Items", width: 34 },
       { key: "game", header: "Game", width: 13 },
       { key: "qty", header: "Qty", type: "int", width: 7, total: true },
-      { key: "unit_price", header: "Unit Price", type: "money", width: 13 },
       { key: "order_total", header: "Order Total", type: "money", width: 13, total: true },
       { key: "deposit", header: "Deposit", type: "money", width: 12, total: true },
       { key: "balance", header: "Balance Due", type: "money", width: 13, total: true },
@@ -186,8 +185,8 @@ export const REPORTS: Record<string, ReportDef> = {
     ],
     rows: () =>
       q(`SELECT po.number, po.created_at, c.name customer, po.product_name, po.game,
-                po.qty, po.unit_price, (po.unit_price * po.qty) order_total, po.deposit,
-                MAX(0, po.unit_price * po.qty - po.deposit) balance,
+                po.qty, COALESCE(po.total, po.unit_price * po.qty) order_total, po.deposit,
+                MAX(0, COALESCE(po.total, po.unit_price * po.qty) - po.deposit) balance,
                 po.status, po.expected_date, po.image
          FROM preorders po
          LEFT JOIN customers c ON c.id = po.customer_id

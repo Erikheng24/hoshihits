@@ -7,8 +7,8 @@ import { PageHeader, StatusBadge, StatCard, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { SearchToolbar } from "@/components/SearchToolbar";
 import { GAMES } from "@/components/InventoryView";
-import { PreorderPhotoField } from "@/components/PreorderPhotoField";
-import { createPreorderAction, advancePreorderAction, cancelPreorderAction, deletePreorderAction } from "./actions";
+import { PreorderForm } from "./PreorderForm";
+import { advancePreorderAction, cancelPreorderAction, deletePreorderAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,8 @@ export default function PreordersPage({ searchParams }: { searchParams: { q?: st
   }
   const rows = db
     .prepare(
-      `SELECT p.*, c.name customer_name, c.phone customer_phone
+      `SELECT p.*, c.name customer_name, c.phone customer_phone,
+        (SELECT COUNT(*) FROM preorder_items i WHERE i.preorder_id = p.id) item_count
        FROM preorders p JOIN customers c ON c.id = p.customer_id
        WHERE ${clauses.join(" AND ")}
        ORDER BY CASE p.status WHEN 'ready' THEN 0 WHEN 'arrived' THEN 1 WHEN 'pending' THEN 2 ELSE 3 END, p.id DESC LIMIT 300`
@@ -92,7 +93,7 @@ export default function PreordersPage({ searchParams }: { searchParams: { q?: st
           </thead>
           <tbody>
             {rows.map((p) => {
-              const total = p.unit_price * p.qty;
+              const total = p.total ?? p.unit_price * p.qty;
               const open = !["collected", "cancelled"].includes(p.status);
               return (
                 <tr key={p.id}>
@@ -113,7 +114,9 @@ export default function PreordersPage({ searchParams }: { searchParams: { q?: st
                       )}
                       <span>
                         {p.product_name}
-                        {p.game && <span className="block text-[11px] text-fog">{p.game}</span>}
+                        {p.item_count > 1
+                          ? <span className="block text-[11px] text-gold-dim">{p.item_count} items</span>
+                          : p.game && <span className="block text-[11px] text-fog">{p.game}</span>}
                       </span>
                     </div>
                   </td>
@@ -159,34 +162,12 @@ export default function PreordersPage({ searchParams }: { searchParams: { q?: st
       {searchParams.new && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <Link href="/preorders" className="absolute inset-0 bg-black/75 animate-fadein" aria-label="Close" />
-          <div className="relative card shadow-pop w-full max-w-lg p-6 animate-rise">
+          <div className="relative card shadow-pop w-full max-w-lg p-6 animate-rise max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display text-lg tracking-wide text-white">New Preorder</h2>
               <Link href="/preorders" className="text-fog hover:text-white"><Icon name="x" className="w-5 h-5" /></Link>
             </div>
-            <form action={createPreorderAction} className="grid sm:grid-cols-2 gap-4">
-              <label className="field sm:col-span-2"><span>Customer *</span>
-                <select name="customer_id" required className="input">
-                  <option value="">Select customer…</option>
-                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
-              <label className="field sm:col-span-2"><span>Product *</span>
-                <input name="product_name" required className="input" placeholder="e.g. OP-10 Royal Blood Booster Box" />
-              </label>
-              <label className="field"><span>Game</span>
-                <select name="game" className="input">{GAMES.map((g) => <option key={g}>{g}</option>)}</select>
-              </label>
-              <label className="field"><span>Expected date</span><input name="expected_date" type="date" className="input num" /></label>
-              <label className="field"><span>Qty</span><input name="qty" type="number" min="1" defaultValue={1} className="input num" /></label>
-              <label className="field"><span>Unit price ($) *</span><input name="unit_price" type="number" step="0.01" min="0.01" required className="input num" /></label>
-              <label className="field"><span>Deposit ($)</span><input name="deposit" type="number" step="0.01" min="0" className="input num" /></label>
-              <PreorderPhotoField />
-              <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
-                <Link href="/preorders" className="btn-ghost px-4 py-2 text-sm">Cancel</Link>
-                <button className="btn-gold px-5 py-2 text-sm">Create preorder</button>
-              </div>
-            </form>
+            <PreorderForm customers={customers} games={GAMES} />
           </div>
         </div>
       )}

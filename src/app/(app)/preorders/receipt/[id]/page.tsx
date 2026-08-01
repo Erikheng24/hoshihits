@@ -34,8 +34,16 @@ export default function PreorderReceiptPage({ params }: { params: { id: string }
   const setting = (k: string) =>
     (db.prepare("SELECT value FROM settings WHERE key=?").get(k) as { value: string } | undefined)?.value ?? "";
 
+  const items = db
+    .prepare("SELECT product_name, game, qty, unit_price, image FROM preorder_items WHERE preorder_id = ? ORDER BY id")
+    .all(p.id) as { product_name: string; game: string | null; qty: number; unit_price: number; image: string | null }[];
+  // Fall back to the legacy single-item columns for any old preorder without items.
+  const lines = items.length
+    ? items
+    : [{ product_name: p.product_name, game: p.game, qty: p.qty, unit_price: p.unit_price, image: p.image }];
+
   const cfg = getReceiptConfig();
-  const total = p.unit_price * p.qty;
+  const total = p.total ?? lines.reduce((a, l) => a + l.unit_price * l.qty, 0);
   const balance = Math.max(0, total - p.deposit);
   const open = !["collected", "cancelled"].includes(p.status);
 
@@ -87,22 +95,24 @@ export default function PreorderReceiptPage({ params }: { params: { id: string }
         <div className="border-t border-dashed border-edge pt-2">
           <table className="w-full text-[1em]">
             <tbody>
-              <tr>
-                <td className="py-1 pr-2 text-mist">
-                  <div className="flex items-start gap-2">
-                    {p.image && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.image} alt="" className="w-[3em] h-[3em] object-cover rounded border border-edge shrink-0" />
-                    )}
-                    <span>
-                      {p.product_name}
-                      {p.game && <span className="block text-[0.85em] text-fog">{p.game}</span>}
-                      <span className="block text-[0.85em] text-fog num">{p.qty} × {money(p.unit_price)}</span>
-                    </span>
-                  </div>
-                </td>
-                <td className="py-1 text-right num text-white align-top">{money(total)}</td>
-              </tr>
+              {lines.map((l, i) => (
+                <tr key={i}>
+                  <td className="py-1 pr-2 text-mist">
+                    <div className="flex items-start gap-2">
+                      {l.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={l.image} alt="" className="w-[3em] h-[3em] object-cover rounded border border-edge shrink-0" />
+                      )}
+                      <span>
+                        {l.product_name}
+                        {l.game && <span className="block text-[0.85em] text-fog">{l.game}</span>}
+                        <span className="block text-[0.85em] text-fog num">{l.qty} × {money(l.unit_price)}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-1 text-right num text-white align-top">{money(l.qty * l.unit_price)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

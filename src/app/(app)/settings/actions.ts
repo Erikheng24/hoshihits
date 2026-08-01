@@ -87,7 +87,7 @@ export async function saveSettingsAction(formData: FormData) {
  * staff logins, shop configuration and the AI quota counter all survive.
  */
 const RESET_TABLES = [
-  "web_order_items", "sale_items", "shipments", "po_items", "tradein_items",
+  "web_order_items", "sale_items", "shipments", "po_items", "tradein_items", "preorder_items",
   "web_orders", "preorders", "sales", "tradeins", "purchase_orders",
   "expenses", "tournaments", "products", "customers", "suppliers",
   "audit_log",
