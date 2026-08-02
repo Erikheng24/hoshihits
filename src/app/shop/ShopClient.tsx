@@ -106,6 +106,7 @@ const BRANDS = [
 export function ShopClient({
   products,
   slideImages,
+  slidePosters,
   shopName,
   tagline,
   logo,
@@ -120,6 +121,7 @@ export function ShopClient({
 }: {
   products: ShopProduct[];
   slideImages: Record<string, string[]>;
+  slidePosters: Record<string, string>;
   shopName: string;
   tagline: string;
   logo: string | null;
@@ -318,7 +320,7 @@ export function ShopClient({
 
       {/* HERO CAROUSEL */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-20 sm:pt-24">
-        <Carousel slide={slide} setSlide={setSlide} onCta={(kind) => applyBrand(kind)} slideImages={slideImages} />
+        <Carousel slide={slide} setSlide={setSlide} onCta={(kind) => applyBrand(kind)} slideImages={slideImages} slidePosters={slidePosters} />
         {/* welcome + quick stats */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-5">
           <p className="text-[#9CA3AF] text-sm sm:text-[15px] flex-1">{welcome || tagline || "Chase the hits. Collect the best. Authentic Japanese product, delivered."}</p>
@@ -546,20 +548,25 @@ export function ShopClient({
 }
 
 /* ---------------------------------- Carousel --------------------------------- */
-function Carousel({ slide, setSlide, onCta, slideImages }: {
-  slide: number; setSlide: (n: number) => void; onCta: (kind: string) => void; slideImages: Record<string, string[]>;
+function Carousel({ slide, setSlide, onCta, slideImages, slidePosters }: {
+  slide: number; setSlide: (n: number) => void; onCta: (kind: string) => void;
+  slideImages: Record<string, string[]>; slidePosters: Record<string, string>;
 }) {
   const go = (d: number) => setSlide((slide + d + SLIDES.length) % SLIDES.length);
   return (
     <div className="carousel group relative h-[360px] sm:h-[420px] lg:h-[460px] ring-1 ring-[#27272A] shadow-pop">
       {SLIDES.map((s, i) => {
+        const poster = slidePosters[s.key] ?? "";
         const imgs = (slideImages[s.key] ?? []).slice(0, 4);
         return (
         <div key={s.key} className={`c-slide ${i === slide ? "is-active" : ""}`} style={{ background: s.bg }} aria-hidden={i !== slide}>
           {/* holo flare */}
-          <div className="holo-flare absolute -top-16 -right-10 w-72 h-72 rounded-full" />
-          {/* Real inventory collage — the shop's own product photos, fanned like cards. */}
-          {imgs.length > 0 ? (
+          {!poster && <div className="holo-flare absolute -top-16 -right-10 w-72 h-72 rounded-full" />}
+          {/* Owner-uploaded poster wins; else fan the shop's own product photos. */}
+          {poster ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={poster} alt="" className="absolute inset-0 w-full h-full object-cover" aria-hidden="true" />
+          ) : imgs.length > 0 ? (
             <div className="absolute right-0 top-0 h-full w-[62%] sm:w-[55%] hidden sm:flex items-center justify-center pointer-events-none" aria-hidden="true">
               <div className="relative w-full h-full flex items-center justify-center">
                 {imgs.map((src, k) => {

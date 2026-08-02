@@ -139,6 +139,26 @@ export default function SettingsPage() {
               hint="A wide picture works best — a card, box art or your poster. Leave empty for a clean coloured banner."
               initial={settings.promo_image?.startsWith("data:image/") ? settings.promo_image : null} />
           </div>
+
+          <div className="sm:col-span-2 pt-1">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-mist mb-1">Hero banner posters (top slider)</p>
+            <div className="gold-rule mb-2" />
+            <p className="text-[12px] text-fog mb-3">
+              Upload a wide poster for each of the 3 top slides. To change one later, just tap <b>Change</b> (replace) or <b>Remove</b> (delete). Leave a slide empty to auto-show a collage of your own cards.
+            </p>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <ImageUploadField name="slide_pokemon_img" label="Slide 1 — Pokémon" max={1280}
+                hint="Wide 16:9 image."
+                initial={settings.slide_pokemon_img?.startsWith("data:image/") ? settings.slide_pokemon_img : null} />
+              <ImageUploadField name="slide_onepiece_img" label="Slide 2 — One Piece" max={1280}
+                hint="Wide 16:9 image."
+                initial={settings.slide_onepiece_img?.startsWith("data:image/") ? settings.slide_onepiece_img : null} />
+              <ImageUploadField name="slide_accessory_img" label="Slide 3 — Accessories" max={1280}
+                hint="Wide 16:9 image."
+                initial={settings.slide_accessory_img?.startsWith("data:image/") ? settings.slide_accessory_img : null} />
+            </div>
+          </div>
+
           <div className="sm:col-span-2 flex items-center justify-between gap-3 flex-wrap">
             <Badge tone={settings.promo_title || settings.promo_image ? "green" : "gray"}>
               {settings.promo_title || settings.promo_image ? "Promo live on shop" : "Follow-us banner only"}

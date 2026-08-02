@@ -42,11 +42,19 @@ export default function ShopPage() {
     onepiece: pickImgs((p) => /one[\s-]?piece/i.test(p.game)),
     accessory: pickImgs((p) => p.category === "accessory" || p.category === "sealed"),
   };
+  // Owner-uploaded poster per slide (Settings). Empty → the collage above shows.
+  const poster = (k: string) => (setting(k).startsWith("data:image/") ? setting(k) : "");
+  const slidePosters: Record<string, string> = {
+    pokemon: poster("slide_pokemon_img"),
+    onepiece: poster("slide_onepiece_img"),
+    accessory: poster("slide_accessory_img"),
+  };
 
   return (
     <ShopClient
       products={products}
       slideImages={slideImages}
+      slidePosters={slidePosters}
       shopName={brand.name}
       tagline={brand.tagline}
       logo={brand.logo}

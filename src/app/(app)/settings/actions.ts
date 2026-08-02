@@ -25,7 +25,11 @@ const KEYS = [
   "payment_note",
 ];
 // Image settings (data URLs), saved with a size cap like the logo.
-const IMAGE_KEYS = ["logo", "payment_qr_aba", "payment_qr_acleda", "promo_image"];
+const IMAGE_KEYS = [
+  "logo", "payment_qr_aba", "payment_qr_acleda", "promo_image",
+  // Hero carousel posters — one wide image per slide (empty = auto collage).
+  "slide_pokemon_img", "slide_onepiece_img", "slide_accessory_img",
+];
 // Checkboxes: absent from the form data means "off", so they need explicit handling.
 const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_phone", "receipt_show_staff"];
 
