@@ -295,6 +295,73 @@ label.field > span {
 }
 .tile:active { transform: translateY(-1px) scale(0.99); }
 
+/* ---- Shop design system v2 (space charcoal + amber gold) ---------------- */
+.sx-bg { background: #0B0D11; }
+.sx-card {
+  background: #161922;
+  border: 1px solid #27272A;
+  border-radius: 14px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px -16px rgba(0, 0, 0, 0.8);
+}
+.sx-amber { color: #f59e0b; }
+.btn-amber {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border-radius: 0.6rem; font-weight: 700; color: #0b0d11;
+  background: linear-gradient(160deg, #fbbf24, #f59e0b 55%, #ea8a06);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 8px 20px -8px rgba(245, 158, 11, 0.6);
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.btn-amber:hover { filter: brightness(1.06); }
+.btn-amber:active { transform: translateY(1px); }
+/* Product-card image zoom is driven by the .shop-card hover (amber glow). */
+@media (hover: hover) {
+  .shop-card:hover {
+    border-color: rgba(245, 158, 11, 0.5) !important;
+    box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.28), 0 24px 60px -28px rgba(0, 0, 0, 0.95) !important;
+  }
+  .shop-card:hover .shop-card-img { transform: scale(1.04); }
+}
+
+/* Low-stock badge: soft pulsing amber ring. */
+@keyframes pulsering {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+  50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0); }
+}
+.pulse-ring { animation: pulsering 1.8s ease-in-out infinite; }
+/* Graded slab badge: sleek brushed-metal border. */
+.psa-metal {
+  background: linear-gradient(135deg, #3f434c, #e7ebf1 46%, #aab2bf 56%, #3f434c);
+  color: #0b0d11;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- Hero carousel ------------------------------------------------------ */
+.carousel { position: relative; overflow: hidden; border-radius: 24px; }
+.c-slide {
+  position: absolute; inset: 0;
+  opacity: 0; transform: scale(1.04);
+  transition: opacity 0.8s ease, transform 6s ease;
+  pointer-events: none;
+}
+.c-slide.is-active {
+  opacity: 1; transform: scale(1);
+  pointer-events: auto;
+}
+.c-arrow {
+  opacity: 0; transition: opacity 0.25s ease, background 0.2s ease;
+}
+.carousel:hover .c-arrow { opacity: 1; }
+@media (hover: none) { .c-arrow { opacity: 1; } }
+.c-dot { transition: width 0.3s ease, background 0.3s ease; }
+
+/* Holo flare accents used in the slide scenes. */
+.holo-flare {
+  background: conic-gradient(from 180deg, #f59e0b, #f97316, #ef4444, #8b5cf6, #3b82f6, #f59e0b);
+  filter: blur(28px);
+  opacity: 0.55;
+}
+
 /* Social buttons keep their brand colour so customers recognise them instantly. */
 .btn-fb {
   background: linear-gradient(160deg, #2d88ff, #1877f2 60%, #0b5fcc);
