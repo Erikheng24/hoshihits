@@ -19,11 +19,13 @@ const KEYS = [
   "payway_merchant_id", "payway_api_key", "payway_sandbox", "payway_qr", "app_base_url",
   // Customer storefront + Telegram ordering
   "shop_enabled", "shop_welcome", "telegram_bot_token", "telegram_admin_chat_id", "telegram_admin_username",
+  // Storefront socials + promo banner (Facebook page, Telegram channel, announcements)
+  "shop_facebook", "shop_telegram_channel", "promo_title", "promo_text", "promo_cta", "promo_link",
   // Payment instructions shown by the bot
   "payment_note",
 ];
 // Image settings (data URLs), saved with a size cap like the logo.
-const IMAGE_KEYS = ["logo", "payment_qr_aba", "payment_qr_acleda"];
+const IMAGE_KEYS = ["logo", "payment_qr_aba", "payment_qr_acleda", "promo_image"];
 // Checkboxes: absent from the form data means "off", so they need explicit handling.
 const TOGGLES = ["receipt_show_tagline", "receipt_show_address", "receipt_show_phone", "receipt_show_staff"];
 
@@ -74,7 +76,7 @@ export async function saveSettingsAction(formData: FormData) {
     if (raw === null) continue; // field not on this form — leave as-is
     const v = String(raw).trim();
     if (v === "") up.run(key, "");
-    else if (v.startsWith("data:image/") && v.length < 500_000) up.run(key, v);
+    else if (v.startsWith("data:image/") && v.length < 900_000) up.run(key, v);
   }
   audit(user.id, "settings.update", "settings", undefined, [...KEYS, ...IMAGE_KEYS].join(", "));
   revalidatePath("/", "layout"); // branding shows in the shell, so refresh everything

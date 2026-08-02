@@ -39,6 +39,30 @@ const SORTS = [
 const catLabel = (k: string) => CATS.find((c) => c.key === k)?.label ?? k;
 const imgsOf = (p: ShopProduct) => [p.image, p.image2, p.image3].filter(Boolean) as string[];
 
+export interface Promo {
+  title: string;
+  text: string;
+  cta: string;
+  link: string;
+  image: string;
+}
+
+/** Turn a "HoshiHits" / "@HoshiHits" / "t.me/HoshiHits" input into a full URL. */
+const fbUrl = (v: string) => {
+  const s = v.trim();
+  if (!s) return "";
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.includes("facebook.com") || s.includes("fb.com")) return `https://${s.replace(/^\/+/, "")}`;
+  return `https://facebook.com/${s.replace(/^@/, "")}`;
+};
+const tgUrl = (v: string) => {
+  const s = v.trim();
+  if (!s) return "";
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.includes("t.me")) return `https://${s.replace(/^\/+/, "")}`;
+  return `https://t.me/${s.replace(/^@/, "")}`;
+};
+
 export function ShopClient({
   products,
   shopName,
@@ -49,6 +73,9 @@ export function ShopClient({
   address,
   telegramUser,
   telegramReady,
+  facebook,
+  channel,
+  promo,
 }: {
   products: ShopProduct[];
   shopName: string;
@@ -59,6 +86,9 @@ export function ShopClient({
   address: string;
   telegramUser: string;
   telegramReady: boolean;
+  facebook: string;
+  channel: string;
+  promo: Promo;
 }) {
   const [q, setQ] = useState("");
   const [game, setGame] = useState("");
@@ -99,6 +129,12 @@ export function ShopClient({
 
   const games = useMemo(() => Array.from(new Set(products.map((p) => p.game))), [products]);
   const newestIds = useMemo(() => new Set(products.slice(0, 6).map((p) => p.id)), [products]);
+
+  // Socials (full URLs) + whether the owner has posted a promo.
+  const fb = fbUrl(facebook);
+  const tg = tgUrl(channel);
+  const promoImg = promo.image?.startsWith("data:image/") ? promo.image : "";
+  const hasPromo = !!(promo.title?.trim() || promo.text?.trim() || promoImg);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -200,6 +236,16 @@ export function ShopClient({
             <span className={`font-display tracking-[0.14em] text-gold-grad text-sm truncate transition-opacity ${scrolled ? "opacity-100" : "opacity-0 sm:opacity-100"}`}>{shopName.toUpperCase()}</span>
           </button>
           <div className="flex-1" />
+          {fb && (
+            <a href={fb} target="_blank" rel="noopener" aria-label="Facebook" className="btn-fb w-9 h-9 rounded-lg grid place-items-center shrink-0">
+              <FbIcon />
+            </a>
+          )}
+          {tg && (
+            <a href={tg} target="_blank" rel="noopener" aria-label="Telegram channel" className="btn-tg w-9 h-9 rounded-lg grid place-items-center shrink-0">
+              <TgIcon />
+            </a>
+          )}
           <button onClick={() => setCartOpen(true)} className="relative btn-ghost px-3.5 py-2 text-sm">
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M6 6h15l-1.5 9h-12z" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /><path d="M6 6 5 3H2" /></svg>
             <span className="hidden sm:inline">Cart</span>
@@ -210,53 +256,69 @@ export function ShopClient({
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <div className="hero-aura absolute inset-0" />
-        <div className="relative max-w-6xl mx-auto px-5 pt-24 pb-14 sm:pt-32 sm:pb-20 text-center">
+        <div className="aurora aurora-move absolute inset-0" />
+        {/* floating card emojis for a playful TCG feel */}
+        <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" aria-hidden="true">
+          <span className="absolute left-[8%] top-[24%] text-4xl sm:text-5xl opacity-20 floaty" style={{ animationDelay: "0s" }}>🃏</span>
+          <span className="absolute right-[9%] top-[18%] text-3xl sm:text-5xl opacity-20 floaty" style={{ animationDelay: "1.2s" }}>⚡</span>
+          <span className="absolute left-[16%] bottom-[14%] text-3xl sm:text-4xl opacity-20 floaty" style={{ animationDelay: "2.1s" }}>🏴‍☠️</span>
+          <span className="absolute right-[15%] bottom-[18%] text-3xl sm:text-5xl opacity-20 floaty" style={{ animationDelay: "0.6s" }}>✨</span>
+        </div>
+        <div className="relative max-w-6xl mx-auto px-5 pt-24 pb-14 sm:pt-32 sm:pb-16 text-center">
           {logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logo} alt="" className="w-20 h-20 rounded-2xl object-cover mx-auto mb-6 floaty shadow-pop" />
+            <img src={logo} alt="" className="w-24 h-24 rounded-2xl object-contain bg-black/25 backdrop-blur p-2 mx-auto mb-6 floaty shadow-pop ring-1 ring-white/10" />
           ) : (
             <span className="w-20 h-20 rounded-2xl badge-foil grid place-items-center text-gold text-3xl mx-auto mb-6 floaty">★</span>
           )}
-          <p className="text-[11px] uppercase tracking-[0.4em] text-gold-dim mb-3">Trading Card Boutique</p>
-          <h1 className="font-display text-4xl sm:text-6xl tracking-[0.06em] leading-[1.05]">
+          <p className="text-[11px] uppercase tracking-[0.4em] text-gold-soft mb-3">Pokémon · One Piece · &amp; more</p>
+          <h1 className="font-display text-4xl sm:text-6xl tracking-[0.06em] leading-[1.05] drop-shadow-[0_2px_18px_rgba(0,0,0,0.6)]">
             <span className="text-gold-grad">{shopName.toUpperCase()}</span>
           </h1>
-          <p className="text-mist mt-4 max-w-md mx-auto text-sm sm:text-base">{welcome || tagline || "Chase the hits. Collect the best. Authentic Japanese product, delivered."}</p>
-          <div className="flex items-center justify-center gap-3 mt-8">
+          <p className="text-white/90 mt-4 max-w-md mx-auto text-sm sm:text-base">{welcome || tagline || "Chase the hits. Collect the best. Authentic Japanese product, delivered."}</p>
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-8">
             <button onClick={scrollToGrid} className="btn-gold px-7 py-3 text-sm">Shop the collection</button>
             {telegramUser && (
-              <a href={`https://t.me/${telegramUser}`} target="_blank" rel="noopener" className="btn-ghost px-5 py-3 text-sm">Chat with us</a>
+              <a href={`https://t.me/${telegramUser}`} target="_blank" rel="noopener" className="btn-ghost px-5 py-3 text-sm bg-black/30 backdrop-blur">Chat with us</a>
             )}
+            {fb && <a href={fb} target="_blank" rel="noopener" className="btn-fb px-4 py-3 text-sm rounded-lg gap-2"><FbIcon /> Facebook</a>}
+            {tg && <a href={tg} target="_blank" rel="noopener" className="btn-tg px-4 py-3 text-sm rounded-lg gap-2"><TgIcon /> Channel</a>}
           </div>
           <div className="flex items-center justify-center gap-6 sm:gap-10 mt-10 text-center">
             {[["Products", String(products.length)], ["Games", String(games.length)], ["Pay via", "Telegram"]].map(([l, v]) => (
               <div key={l}>
                 <p className="font-display text-xl sm:text-2xl text-gold-soft">{v}</p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-fog mt-0.5">{l}</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/50 mt-0.5">{l}</p>
               </div>
             ))}
           </div>
         </div>
-        <div className="rule-gold max-w-4xl mx-auto" />
+        <div className="foil-rule max-w-4xl mx-auto" />
+      </section>
+
+      {/* PROMO / FOLLOW-US BANNER */}
+      <section className="max-w-6xl mx-auto px-5 pt-8">
+        <PromoBanner promo={{ ...promo, image: promoImg }} hasPromo={hasPromo} fb={fb} tg={tg} shopName={shopName} />
       </section>
 
       {/* Category tiles */}
       <section className="max-w-6xl mx-auto px-5 pt-10">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { key: "sealed", label: "Boxes & Packs", icon: "📦", tint: "from-[#c0392b]/25" },
-            { key: "single", label: "Singles", icon: "🃏", tint: "from-[#2980b9]/25" },
-            { key: "graded", label: "Graded Slabs", icon: "🏆", tint: "from-[#e67e22]/25" },
-            { key: "accessory", label: "Accessories", icon: "✨", tint: "from-[#8e44ad]/25" },
+            { key: "sealed", label: "Boxes & Packs", icon: "📦", grad: "from-ruby/30 via-ruby/10", ring: "ring-ruby/50", glow: "rgba(248,113,113,0.4)" },
+            { key: "single", label: "Singles", icon: "🃏", grad: "from-sky2/30 via-sky2/10", ring: "ring-sky2/50", glow: "rgba(96,165,250,0.4)" },
+            { key: "graded", label: "Graded Slabs", icon: "🏆", grad: "from-amberish/30 via-amberish/10", ring: "ring-amberish/50", glow: "rgba(251,191,36,0.4)" },
+            { key: "accessory", label: "Accessories", icon: "✨", grad: "from-jade/30 via-jade/10", ring: "ring-jade/50", glow: "rgba(74,222,128,0.4)" },
           ].map((c) => {
             const n = products.filter((p) => p.category === c.key).length;
+            const on = cat === c.key;
             return (
               <button key={c.key} onClick={() => { setCat(c.key); setFavOnly(false); scrollToGrid(); }}
-                className={`shop-card card overflow-hidden p-4 sm:p-5 text-center bg-gradient-to-br ${c.tint} to-transparent ${cat === c.key ? "!border-gold/50" : ""}`}>
-                <div className="text-2xl sm:text-3xl mb-1.5 sm:mb-2">{c.icon}</div>
+                className={`tile card overflow-hidden p-4 sm:p-5 text-center bg-gradient-to-br ${c.grad} to-transparent ring-1 ${on ? c.ring : "ring-white/5"}`}
+                style={on ? { boxShadow: `0 12px 40px -12px ${c.glow}` } : undefined}>
+                <div className="text-3xl sm:text-4xl mb-1.5 sm:mb-2 drop-shadow">{c.icon}</div>
                 <p className="font-display tracking-[0.05em] text-[12px] sm:text-sm text-white leading-tight">{c.label}</p>
-                <p className="text-[10px] sm:text-[11px] text-fog mt-0.5 num">{n} item{n === 1 ? "" : "s"}</p>
+                <p className="text-[10px] sm:text-[11px] text-white/60 mt-0.5 num">{n} item{n === 1 ? "" : "s"}</p>
               </button>
             );
           })}
@@ -279,10 +341,10 @@ export function ShopClient({
                 onClick={() => { setDetail(p); setDetailImg(0); }}
                 className="shop-card card overflow-hidden shrink-0 w-40 snap-start text-left"
               >
-                <div className="aspect-square bg-panel-2 overflow-hidden relative">
+                <div className="aspect-[3/4] card-slot overflow-hidden relative">
                   {p.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image} alt={p.name} className="shop-card-img w-full h-full object-cover" />
+                    <img src={p.image} alt={p.name} className="shop-card-img w-full h-full object-contain p-2" />
                   ) : <span className="grid place-items-center h-full text-fog text-3xl">★</span>}
                   <span className="absolute top-2 left-2 text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-jade/20 text-jade border border-jade/30">NEW</span>
                 </div>
@@ -346,10 +408,10 @@ export function ShopClient({
               return (
                 <div key={p.id} className={`shop-card card overflow-hidden flex flex-col animate-rise ${soldOut ? "opacity-70" : ""}`} style={{ animationDelay: `${Math.min(i, 8) * 0.04}s` }}>
                   <div className="relative">
-                    <button onClick={() => { setDetail(p); setDetailImg(0); setZoom(false); }} className="block aspect-square bg-panel-2 overflow-hidden w-full">
+                    <button onClick={() => { setDetail(p); setDetailImg(0); setZoom(false); }} className="block aspect-[3/4] card-slot overflow-hidden w-full">
                       {p.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.image} alt={p.name} className={`shop-card-img w-full h-full object-cover ${soldOut ? "grayscale" : ""}`} />
+                        <img src={p.image} alt={p.name} className={`shop-card-img w-full h-full object-contain p-2.5 ${soldOut ? "grayscale" : ""}`} />
                       ) : <span className="grid place-items-center h-full text-fog text-4xl">★</span>}
                     </button>
                     {/* badges */}
@@ -406,7 +468,13 @@ export function ShopClient({
             <p className="text-mist uppercase tracking-[0.2em] text-[10px] mb-1.5">Visit / Contact</p>
             {address && <p>{address}</p>}
             {phone && <p className="num">{phone}</p>}
-            {telegramUser && <a href={`https://t.me/${telegramUser}`} target="_blank" rel="noopener" className="text-gold-dim hover:text-gold">@{telegramUser}</a>}
+            {telegramUser && <a href={`https://t.me/${telegramUser}`} target="_blank" rel="noopener" className="text-gold-dim hover:text-gold block">@{telegramUser}</a>}
+            {(fb || tg) && (
+              <div className="flex items-center justify-center sm:justify-start gap-2 pt-2">
+                {fb && <a href={fb} target="_blank" rel="noopener" aria-label="Facebook" className="btn-fb w-9 h-9 rounded-lg grid place-items-center"><FbIcon /></a>}
+                {tg && <a href={tg} target="_blank" rel="noopener" aria-label="Telegram channel" className="btn-tg w-9 h-9 rounded-lg grid place-items-center"><TgIcon /></a>}
+              </div>
+            )}
           </div>
           <div className="text-[12px] text-fog space-y-1.5">
             <p className="text-mist uppercase tracking-[0.2em] text-[10px] mb-1.5">Why shop with us</p>
@@ -443,6 +511,64 @@ function Heart({ filled }: { filled: boolean }) {
     <svg viewBox="0 0 24 24" className={`w-4 h-4 ${filled ? "text-gold fill-gold" : "text-mist"}`} fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.7}>
       <path d="M12 21s-7.5-4.6-10-9.2C.6 8.9 2 5.5 5.2 5.5c1.9 0 3.2 1.1 3.8 2.2h.2c.6-1.1 1.9-2.2 3.8-2.2 3.2 0 4.6 3.4 3.2 6.3C19.5 16.4 12 21 12 21z" transform="translate(0 -0.5)" />
     </svg>
+  );
+}
+
+function FbIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
+      <path d="M13.5 21v-8h2.6l.4-3h-3V8.1c0-.86.24-1.45 1.5-1.45H17V4a20 20 0 0 0-2.3-.12c-2.3 0-3.9 1.4-3.9 4V10H8.3v3H10.8v8z" />
+    </svg>
+  );
+}
+function TgIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
+      <path d="M21.9 4.3 18.6 20c-.24 1.1-.9 1.36-1.83.85l-5.05-3.72-2.44 2.35c-.27.27-.5.5-1 .5l.36-5.14L18.9 6.16c.4-.36-.09-.56-.63-.2L6.75 13.2 1.8 11.66c-1.07-.34-1.1-1.07.23-1.58l19.32-7.45c.9-.32 1.68.22 1.55 1.67z" />
+    </svg>
+  );
+}
+
+/**
+ * Promo / follow-us banner. Shows the owner's posted promo (headline, message,
+ * image, button) when set; otherwise a bright "follow us" card. Always surfaces
+ * the Facebook page + Telegram channel so customers can follow drops.
+ */
+function PromoBanner({ promo, hasPromo, fb, tg, shopName }: {
+  promo: Promo; hasPromo: boolean; fb: string; tg: string; shopName: string;
+}) {
+  if (!hasPromo && !fb && !tg) return null;
+  const title = hasPromo ? (promo.title?.trim() || "New drop!") : `Follow ${shopName}`;
+  const text = hasPromo
+    ? promo.text?.trim()
+    : "Preorders, restocks & giveaways drop first on our Facebook and Telegram. Tap to follow so you never miss a hit.";
+  const badge = hasPromo ? "🔥 Latest drop" : "⭐ Stay in the loop";
+
+  return (
+    <div className="relative rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-pop shine">
+      <div className="aurora aurora-move absolute inset-0" />
+      <div className="absolute inset-0 bg-black/25" />
+      <div className="relative flex flex-col sm:flex-row items-stretch">
+        {promo.image && (
+          <div className="sm:w-2/5 shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={promo.image} alt="" className="w-full h-44 sm:h-full object-cover" />
+          </div>
+        )}
+        <div className="flex-1 p-5 sm:p-7">
+          <span className="inline-block text-[11px] font-bold tracking-wider px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-white mb-3">{badge}</span>
+          <h3 className="font-display text-2xl sm:text-3xl text-white leading-tight drop-shadow">{title}</h3>
+          {text && <p className="text-white/90 text-sm mt-2 max-w-xl">{text}</p>}
+          <div className="flex flex-wrap gap-2.5 mt-5">
+            {hasPromo && promo.cta?.trim() && promo.link?.trim() && (
+              <a href={promo.link.trim()} target="_blank" rel="noopener" className="btn-gold px-6 py-3 text-sm">{promo.cta.trim()}</a>
+            )}
+            {fb && <a href={fb} target="_blank" rel="noopener" className="btn-fb px-5 py-3 text-sm rounded-lg gap-2"><FbIcon /> Facebook</a>}
+            {tg && <a href={tg} target="_blank" rel="noopener" className="btn-tg px-5 py-3 text-sm rounded-lg gap-2"><TgIcon /> Telegram</a>}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

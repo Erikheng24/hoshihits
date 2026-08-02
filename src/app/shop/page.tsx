@@ -37,6 +37,15 @@ export default function ShopPage() {
       address={setting("store_address")}
       telegramUser={setting("telegram_admin_username").replace(/^@/, "")}
       telegramReady={telegramConfigured()}
+      facebook={setting("shop_facebook")}
+      channel={setting("shop_telegram_channel")}
+      promo={{
+        title: setting("promo_title"),
+        text: setting("promo_text"),
+        cta: setting("promo_cta"),
+        link: setting("promo_link"),
+        image: setting("promo_image"),
+      }}
     />
   );
 }

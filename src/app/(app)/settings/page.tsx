@@ -105,6 +105,49 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      <Card title="Storefront — Socials & Promo Banner" className="p-5 mb-4">
+        <p className="text-[12px] text-fog mb-4">
+          Add your Facebook page and Telegram channel, and post a promo banner on the shop — a preorder drop, restock or giveaway.
+          Leave the promo blank to just show your “Follow us” banner. Changes appear on <a href="/shop" target="_blank" className="text-gold-dim hover:text-gold underline">the shop</a> right away.
+        </p>
+        <form action={saveSettingsAction} className="grid sm:grid-cols-2 gap-4">
+          <label className="field"><span>Facebook page (link or username)</span>
+            <input name="shop_facebook" className="input" defaultValue={settings.shop_facebook ?? ""} placeholder="e.g. HoshiHits or facebook.com/HoshiHits" />
+          </label>
+          <label className="field"><span>Telegram channel (link or @name)</span>
+            <input name="shop_telegram_channel" className="input" defaultValue={settings.shop_telegram_channel ?? ""} placeholder="e.g. @HoshiHits or t.me/HoshiHits" />
+          </label>
+
+          <div className="sm:col-span-2 pt-1">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-mist mb-1">Promo banner (optional)</p>
+            <div className="gold-rule mb-3" />
+          </div>
+          <label className="field"><span>Headline</span>
+            <input name="promo_title" className="input" defaultValue={settings.promo_title ?? ""} placeholder="e.g. OP-11 Preorders OPEN!" maxLength={60} />
+          </label>
+          <label className="field"><span>Button label (optional)</span>
+            <input name="promo_cta" className="input" defaultValue={settings.promo_cta ?? ""} placeholder="e.g. Preorder now" maxLength={24} />
+          </label>
+          <label className="field sm:col-span-2"><span>Message</span>
+            <input name="promo_text" className="input" defaultValue={settings.promo_text ?? ""} placeholder="e.g. Secure your box — limited slots. Deposit to lock it in." maxLength={140} />
+          </label>
+          <label className="field sm:col-span-2"><span>Button link (optional)</span>
+            <input name="promo_link" className="input num" defaultValue={settings.promo_link ?? ""} placeholder="e.g. https://t.me/HoshiHits or a Facebook post link" />
+          </label>
+          <div className="sm:col-span-2">
+            <ImageUploadField name="promo_image" label="Banner image (optional)" max={1000}
+              hint="A wide picture works best — a card, box art or your poster. Leave empty for a clean coloured banner."
+              initial={settings.promo_image?.startsWith("data:image/") ? settings.promo_image : null} />
+          </div>
+          <div className="sm:col-span-2 flex items-center justify-between gap-3 flex-wrap">
+            <Badge tone={settings.promo_title || settings.promo_image ? "green" : "gray"}>
+              {settings.promo_title || settings.promo_image ? "Promo live on shop" : "Follow-us banner only"}
+            </Badge>
+            <button className="btn-gold px-5 py-2 text-sm">Save storefront</button>
+          </div>
+        </form>
+      </Card>
+
       <Card title="KHQR Payment (Bakong)" className="p-5 mb-4">
         <p className="text-[12px] text-fog mb-4">
           Take Cambodian QR payments at checkout. The customer scans a dynamic KHQR on a spare phone
