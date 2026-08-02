@@ -26,9 +26,27 @@ export default function ShopPage() {
   const setting = (k: string) =>
     (db.prepare("SELECT value FROM settings WHERE key=?").get(k) as { value: string } | undefined)?.value ?? "";
 
+  // Build each hero slide's collage from the shop's OWN product photos — real,
+  // owned inventory (no third-party artwork). In-stock first, then anything.
+  const withImg = products.filter((p) => p.image);
+  const pickImgs = (pred: (p: ShopProduct) => boolean, n = 4): string[] => {
+    const hit = withImg.filter(pred);
+    const ranked = [...hit.filter((p) => p.stock > 0), ...hit.filter((p) => p.stock <= 0)];
+    const out = ranked.slice(0, n).map((p) => p.image!);
+    // Fall back to any product photos so a themed slide is never empty.
+    if (out.length < 2) out.push(...withImg.slice(0, n - out.length).map((p) => p.image!));
+    return out.slice(0, n);
+  };
+  const slideImages: Record<string, string[]> = {
+    pokemon: pickImgs((p) => /pok[eé]?mon/i.test(p.game)),
+    onepiece: pickImgs((p) => /one[\s-]?piece/i.test(p.game)),
+    accessory: pickImgs((p) => p.category === "accessory" || p.category === "sealed"),
+  };
+
   return (
     <ShopClient
       products={products}
+      slideImages={slideImages}
       shopName={brand.name}
       tagline={brand.tagline}
       logo={brand.logo}

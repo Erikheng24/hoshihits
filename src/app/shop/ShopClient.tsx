@@ -105,6 +105,7 @@ const BRANDS = [
 
 export function ShopClient({
   products,
+  slideImages,
   shopName,
   tagline,
   logo,
@@ -118,6 +119,7 @@ export function ShopClient({
   promo,
 }: {
   products: ShopProduct[];
+  slideImages: Record<string, string[]>;
   shopName: string;
   tagline: string;
   logo: string | null;
@@ -316,7 +318,7 @@ export function ShopClient({
 
       {/* HERO CAROUSEL */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-20 sm:pt-24">
-        <Carousel slide={slide} setSlide={setSlide} onCta={(kind) => applyBrand(kind)} />
+        <Carousel slide={slide} setSlide={setSlide} onCta={(kind) => applyBrand(kind)} slideImages={slideImages} />
         {/* welcome + quick stats */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-5">
           <p className="text-[#9CA3AF] text-sm sm:text-[15px] flex-1">{welcome || tagline || "Chase the hits. Collect the best. Authentic Japanese product, delivered."}</p>
@@ -544,20 +546,41 @@ export function ShopClient({
 }
 
 /* ---------------------------------- Carousel --------------------------------- */
-function Carousel({ slide, setSlide, onCta }: { slide: number; setSlide: (n: number) => void; onCta: (kind: string) => void }) {
+function Carousel({ slide, setSlide, onCta, slideImages }: {
+  slide: number; setSlide: (n: number) => void; onCta: (kind: string) => void; slideImages: Record<string, string[]>;
+}) {
   const go = (d: number) => setSlide((slide + d + SLIDES.length) % SLIDES.length);
   return (
     <div className="carousel group relative h-[360px] sm:h-[420px] lg:h-[460px] ring-1 ring-[#27272A] shadow-pop">
-      {SLIDES.map((s, i) => (
+      {SLIDES.map((s, i) => {
+        const imgs = (slideImages[s.key] ?? []).slice(0, 4);
+        return (
         <div key={s.key} className={`c-slide ${i === slide ? "is-active" : ""}`} style={{ background: s.bg }} aria-hidden={i !== slide}>
-          {/* holo flare + oversized franchise emojis (no character IP) */}
+          {/* holo flare */}
           <div className="holo-flare absolute -top-16 -right-10 w-72 h-72 rounded-full" />
-          <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
-            <span className="absolute right-[6%] top-[14%] text-[7rem] sm:text-[10rem] opacity-25 floaty" style={{ animationDelay: "0s" }}>{s.emojis[0]}</span>
-            <span className="absolute right-[26%] bottom-[8%] text-6xl sm:text-8xl opacity-20 floaty" style={{ animationDelay: "1.1s" }}>{s.emojis[1]}</span>
-            <span className="absolute right-[44%] top-[18%] text-5xl sm:text-7xl opacity-15 floaty" style={{ animationDelay: "2s" }}>{s.emojis[2]}</span>
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent" />
+          {/* Real inventory collage — the shop's own product photos, fanned like cards. */}
+          {imgs.length > 0 ? (
+            <div className="absolute right-0 top-0 h-full w-[62%] sm:w-[55%] hidden sm:flex items-center justify-center pointer-events-none" aria-hidden="true">
+              <div className="relative w-full h-full flex items-center justify-center">
+                {imgs.map((src, k) => {
+                  const mid = (imgs.length - 1) / 2;
+                  const off = k - mid;
+                  return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={k} src={src} alt=""
+                      className="absolute w-28 lg:w-36 aspect-[3/4] object-cover rounded-xl ring-1 ring-white/20 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)]"
+                      style={{ transform: `translateX(${off * 82}px) rotate(${off * 8}deg) translateY(${Math.abs(off) * 10}px)`, zIndex: 10 - Math.abs(off) }} />
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
+              <span className="absolute right-[6%] top-[14%] text-[7rem] sm:text-[10rem] opacity-25 floaty">{s.emojis[0]}</span>
+              <span className="absolute right-[26%] bottom-[8%] text-6xl sm:text-8xl opacity-20 floaty" style={{ animationDelay: "1.1s" }}>{s.emojis[1]}</span>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
           <div className="relative h-full flex flex-col justify-center max-w-xl px-6 sm:px-10 lg:px-14">
             <span className="inline-flex w-fit items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/12 backdrop-blur text-white mb-4">{s.badge}</span>
             <h2 className="font-display text-3xl sm:text-5xl leading-[1.05] text-white drop-shadow-[0_3px_18px_rgba(0,0,0,0.6)]">{s.title}</h2>
@@ -565,7 +588,8 @@ function Carousel({ slide, setSlide, onCta }: { slide: number; setSlide: (n: num
             <button onClick={() => onCta(s.key)} className="btn-amber w-fit px-7 py-3 text-sm mt-6">{s.cta}</button>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {/* arrows */}
       <button onClick={() => go(-1)} aria-label="Previous" className="c-arrow absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/45 hover:bg-black/70 backdrop-blur grid place-items-center text-white text-xl">‹</button>
