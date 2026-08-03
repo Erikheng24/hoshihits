@@ -321,6 +321,36 @@ label.field > span {
   filter: blur(70px);
   opacity: 0.18;
 }
+/* Floating translucent "card" silhouettes — TCG flavour, original art. */
+@keyframes floatcard {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(-22px) rotate(calc(var(--r, 0deg) + 4deg)); }
+}
+.float-card {
+  position: absolute;
+  border-radius: 14px;
+  background: linear-gradient(150deg, rgba(34, 211, 238, 0.10), rgba(168, 85, 247, 0.10) 60%, rgba(236, 72, 153, 0.08));
+  border: 1px solid rgba(148, 163, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 30px 70px -24px rgba(0, 0, 0, 0.7);
+  animation: floatcard 10s ease-in-out infinite;
+}
+.float-card::after {
+  content: "";
+  position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(120deg, transparent 40%, rgba(255, 255, 255, 0.10) 50%, transparent 60%);
+}
+/* Twinkling holo sparkles. */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.12; transform: scale(0.7); }
+  50% { opacity: 0.75; transform: scale(1.15); }
+}
+.spark {
+  position: absolute;
+  width: 5px; height: 5px; border-radius: 9999px;
+  background: #a5f3fc;
+  box-shadow: 0 0 10px 2px rgba(103, 232, 249, 0.6);
+  animation: twinkle 3.6s ease-in-out infinite;
+}
 /* Messenger + Instagram brand buttons (Telegram/Facebook defined below). */
 .btn-msg {
   background: linear-gradient(160deg, #00b2ff, #006aff 55%, #a033ff);

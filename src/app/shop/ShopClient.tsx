@@ -332,6 +332,25 @@ export function ShopClient({
         <span className="absolute rounded-full" style={{ width: 480, height: 480, left: "12%", top: "48%", filter: "blur(70px)", opacity: 0.15, background: "radial-gradient(circle,#6366F1,transparent 70%)" }} />
         <span className="absolute rounded-full" style={{ width: 560, height: 560, right: "-6%", top: "58%", filter: "blur(70px)", opacity: 0.16, background: "radial-gradient(circle,#EC4899,transparent 70%)" }} />
         <span className="absolute rounded-full" style={{ width: 500, height: 500, left: "40%", bottom: "-12%", filter: "blur(70px)", opacity: 0.15, background: "radial-gradient(circle,#38BDF8,transparent 70%)" }} />
+        {/* Floating card silhouettes — concentrated in the side gutters. */}
+        {[
+          { w: 120, h: 168, left: "3%", top: "12%", r: "-14deg", d: "0s" },
+          { w: 96, h: 134, left: "6%", top: "58%", r: "10deg", d: "1.4s" },
+          { w: 84, h: 118, left: "1%", top: "80%", r: "-8deg", d: "2.6s" },
+          { w: 128, h: 180, right: "3%", top: "16%", r: "12deg", d: "0.6s" },
+          { w: 100, h: 140, right: "6%", top: "62%", r: "-10deg", d: "2s" },
+          { w: 88, h: 124, right: "1.5%", top: "84%", r: "8deg", d: "3.2s" },
+        ].map((c, i) => (
+          <div key={i} className="float-card hidden lg:block" style={{ width: c.w, height: c.h, left: c.left, right: c.right, top: c.top, ["--r" as string]: c.r, animationDelay: c.d }} />
+        ))}
+        {/* Twinkling holo sparkles. */}
+        {[
+          ["5%", "26%", "0s"], ["9%", "44%", "1.1s"], ["3%", "70%", "2.2s"], ["11%", "88%", "0.7s"],
+          ["95%", "22%", "1.6s"], ["92%", "48%", "0.4s"], ["97%", "72%", "2.6s"], ["90%", "90%", "1.9s"],
+          ["50%", "8%", "1.2s"], ["70%", "94%", "3s"],
+        ].map(([l, t, d], i) => (
+          <span key={`s${i}`} className="spark" style={{ left: l, top: t, animationDelay: d }} />
+        ))}
       </div>
 
       <main className="relative z-10 min-h-screen text-[#F9FAFB] pb-32">
