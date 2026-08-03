@@ -174,7 +174,6 @@ export function ShopClient({
   const [zoom, setZoom] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [slide, setSlide] = useState(0);
-  const [contactOpen, setContactOpen] = useState(false);
   const [name, setName] = useState("");
   const [phoneIn, setPhoneIn] = useState("");
   const [note, setNote] = useState("");
@@ -217,7 +216,6 @@ export function ShopClient({
   const msg = msgUrl(messenger);
   const tgOrder = tgUrl(telegramOrder) || (adminUser ? `https://t.me/${adminUser}` : "");
   const adminLink = adminUser ? `https://t.me/${adminUser}` : "";
-  const hasContact = !!(tgOrder || msg || adminLink || tg || fb || ig);
   const promoImg = promo.image?.startsWith("data:image/") ? promo.image : "";
   const hasPromo = !!(promo.title?.trim() || promo.text?.trim() || promoImg);
 
@@ -350,11 +348,6 @@ export function ShopClient({
             <span className="font-display tracking-[0.14em] text-gold-grad text-sm truncate">{shopName.toUpperCase()}</span>
           </button>
           <div className="flex-1" />
-          {hasContact && (
-            <button onClick={() => setContactOpen(true)} className="btn-amber px-3 sm:px-4 py-2 text-[13px] shrink-0">
-              <span className="sm:hidden">📩</span><span className="hidden sm:inline">📩 Quick Order</span>
-            </button>
-          )}
           <button onClick={() => setCartOpen(true)} className="relative btn-ghost px-3.5 py-2 text-sm">
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M6 6h15l-1.5 9h-12z" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /><path d="M6 6 5 3H2" /></svg>
             <span className="hidden sm:inline">Cart</span>
@@ -601,11 +594,6 @@ export function ShopClient({
         name={name} setName={setName} phone={phoneIn} setPhone={setPhoneIn} note={note} setNote={setNote}
         location={location} setLocation={setLocation}
         submitting={submitting} err={err} placeOrder={placeOrder} telegramReady={telegramReady} />}
-
-      {contactOpen && (
-        <ContactModal onClose={() => setContactOpen(false)} shopName={shopName} tagline={tagline}
-          tgOrder={tgOrder} msg={msg} adminLink={adminLink} adminUser={adminUser} tg={tg} fb={fb} ig={ig} />
-      )}
       </main>
     </>
   );
@@ -723,42 +711,6 @@ function FooterPill({ href, cls, icon, label }: { href: string; cls: string; ico
       className={`${cls} rounded-lg px-3.5 py-2.5 text-[13px] font-medium flex items-center gap-2.5 justify-center sm:justify-start`}>
       {icon} {label}
     </a>
-  );
-}
-
-/**
- * Contact / direct-order hub. Opens from the header "Quick Order" button and
- * lists every way to order or follow — Telegram, Messenger, Facebook, Instagram.
- */
-function ContactModal({ onClose, shopName, tagline, tgOrder, msg, adminLink, adminUser, tg, fb, ig }: {
-  onClose: () => void; shopName: string; tagline: string;
-  tgOrder: string; msg: string; adminLink: string; adminUser: string; tg: string; fb: string; ig: string;
-}) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/80 animate-fadein" onClick={onClose} />
-      <div className="relative sx-glass shadow-pop w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-6 animate-rise">
-        <button onClick={onClose} className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-black/50 text-white grid place-items-center hover:bg-black/70">×</button>
-        <div className="text-center mb-5">
-          <p className="font-display text-xl text-gold-grad tracking-wide">🇰🇭 {shopName.toUpperCase()}</p>
-          <p className="text-[#9CA3AF] text-[12px] mt-1">{tagline || "Collect • Trade • Chase"}</p>
-        </div>
-
-        <p className="text-white uppercase tracking-[0.2em] text-[10px] mb-2">Order now</p>
-        <div className="flex flex-col gap-2 mb-5">
-          {tgOrder && <FooterPill href={tgOrder} cls="btn-tg" icon={<TgIcon />} label="Order on Telegram" />}
-          {msg && <FooterPill href={msg} cls="btn-msg" icon={<MsgIcon />} label="Order on Messenger" />}
-          {adminLink && <FooterPill href={adminLink} cls="btn-ghost" icon={<TgIcon />} label={adminUser ? `Support — @${adminUser}` : "Admin support DM"} />}
-        </div>
-
-        <p className="text-white uppercase tracking-[0.2em] text-[10px] mb-2">Follow for drops</p>
-        <div className="flex flex-col gap-2">
-          {tg && <FooterPill href={tg} cls="btn-tg" icon={<TgIcon />} label="Telegram Channel" />}
-          {fb && <FooterPill href={fb} cls="btn-fb" icon={<FbIcon />} label="Facebook Page" />}
-          {ig && <FooterPill href={ig} cls="btn-ig" icon={<IgIcon />} label="Instagram" />}
-        </div>
-      </div>
-    </div>
   );
 }
 
