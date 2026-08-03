@@ -89,7 +89,7 @@ const SLIDES = [
     subtitle: "Authentic Japanese Pokémon Cards & PSA 10 Gem Mint Grails",
     cta: "Shop Pokémon",
     emojis: ["⚡", "🔥", "✨"],
-    bg: "radial-gradient(60% 90% at 20% 22%, rgba(245,158,11,0.50), transparent 60%), radial-gradient(70% 90% at 85% 28%, rgba(239,68,68,0.42), transparent 60%), radial-gradient(90% 100% at 50% 125%, rgba(59,130,246,0.34), transparent 60%), #0B0D11",
+    bg: "radial-gradient(60% 90% at 20% 22%, rgba(245,158,11,0.50), transparent 60%), radial-gradient(70% 90% at 85% 28%, rgba(239,68,68,0.42), transparent 60%), radial-gradient(90% 100% at 50% 125%, rgba(59,130,246,0.34), transparent 60%), #0B1020",
   },
   {
     key: "onepiece",
@@ -98,7 +98,7 @@ const SLIDES = [
     subtitle: "Booster Boxes, Single Cards & Starter Decks Direct From Japan",
     cta: "Shop One Piece",
     emojis: ["🏴‍☠️", "⚔️", "🌊"],
-    bg: "radial-gradient(60% 90% at 18% 25%, rgba(239,68,68,0.48), transparent 60%), radial-gradient(70% 90% at 82% 20%, rgba(59,130,246,0.48), transparent 60%), radial-gradient(95% 100% at 50% 128%, rgba(14,165,233,0.40), transparent 60%), #0B0D11",
+    bg: "radial-gradient(60% 90% at 18% 25%, rgba(239,68,68,0.48), transparent 60%), radial-gradient(70% 90% at 82% 20%, rgba(59,130,246,0.48), transparent 60%), radial-gradient(95% 100% at 50% 128%, rgba(14,165,233,0.40), transparent 60%), #0B1020",
   },
   {
     key: "accessory",
@@ -107,7 +107,7 @@ const SLIDES = [
     subtitle: "High-Grade Sleeves, Toploaders & Factory-Sealed Booster Boxes",
     cta: "Explore Accessories",
     emojis: ["📦", "🛡️", "💎"],
-    bg: "radial-gradient(60% 90% at 20% 25%, rgba(139,92,246,0.50), transparent 60%), radial-gradient(70% 90% at 85% 24%, rgba(30,58,138,0.60), transparent 60%), radial-gradient(95% 100% at 50% 128%, rgba(245,158,11,0.28), transparent 60%), #0B0D11",
+    bg: "radial-gradient(60% 90% at 20% 25%, rgba(139,92,246,0.50), transparent 60%), radial-gradient(70% 90% at 85% 24%, rgba(30,58,138,0.60), transparent 60%), radial-gradient(95% 100% at 50% 128%, rgba(245,158,11,0.28), transparent 60%), #0B1020",
   },
 ];
 
@@ -327,11 +327,11 @@ export function ShopClient({
     <>
       {/* Ambient blurred colour halos behind everything (atmosphere, no IP art) */}
       <div className="fixed inset-0 z-0 pointer-events-none sx-bg overflow-hidden" aria-hidden="true">
-        <span className="absolute rounded-full" style={{ width: 460, height: 460, left: "-8%", top: "6%", filter: "blur(70px)", opacity: 0.18, background: "radial-gradient(circle,#FFE600,transparent 70%)" }} />
-        <span className="absolute rounded-full" style={{ width: 520, height: 520, right: "-10%", top: "2%", filter: "blur(70px)", opacity: 0.16, background: "radial-gradient(circle,#FF3300,transparent 70%)" }} />
-        <span className="absolute rounded-full" style={{ width: 480, height: 480, left: "12%", top: "48%", filter: "blur(70px)", opacity: 0.14, background: "radial-gradient(circle,#FF5500,transparent 70%)" }} />
-        <span className="absolute rounded-full" style={{ width: 560, height: 560, right: "-6%", top: "58%", filter: "blur(70px)", opacity: 0.15, background: "radial-gradient(circle,#3B82F6,transparent 70%)" }} />
-        <span className="absolute rounded-full" style={{ width: 500, height: 500, left: "40%", bottom: "-12%", filter: "blur(70px)", opacity: 0.14, background: "radial-gradient(circle,#FFB800,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 460, height: 460, left: "-8%", top: "6%", filter: "blur(70px)", opacity: 0.20, background: "radial-gradient(circle,#22D3EE,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 520, height: 520, right: "-10%", top: "2%", filter: "blur(70px)", opacity: 0.18, background: "radial-gradient(circle,#A855F7,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 480, height: 480, left: "12%", top: "48%", filter: "blur(70px)", opacity: 0.15, background: "radial-gradient(circle,#6366F1,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 560, height: 560, right: "-6%", top: "58%", filter: "blur(70px)", opacity: 0.16, background: "radial-gradient(circle,#EC4899,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 500, height: 500, left: "40%", bottom: "-12%", filter: "blur(70px)", opacity: 0.15, background: "radial-gradient(circle,#38BDF8,transparent 70%)" }} />
       </div>
 
       <main className="relative z-10 min-h-screen text-[#F9FAFB] pb-32">
@@ -351,7 +351,7 @@ export function ShopClient({
           <button onClick={() => setCartOpen(true)} className="relative btn-ghost px-3.5 py-2 text-sm">
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M6 6h15l-1.5 9h-12z" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /><path d="M6 6 5 3H2" /></svg>
             <span className="hidden sm:inline">Cart</span>
-            {count > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-[#f59e0b] text-[#0B0D11] text-[11px] font-bold grid place-items-center pop-in">{count}</span>}
+            {count > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-[#22d3ee] text-[#0B1020] text-[11px] font-bold grid place-items-center pop-in">{count}</span>}
           </button>
         </div>
       </header>
@@ -383,18 +383,18 @@ export function ShopClient({
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { key: "sealed", label: "Boxes & Packs", icon: "📦", grad: "from-ruby/30 via-ruby/10", ring: "ring-ruby/50", glow: "rgba(248,113,113,0.4)" },
-            { key: "single", label: "Singles", icon: "🃏", grad: "from-sky2/30 via-sky2/10", ring: "ring-sky2/50", glow: "rgba(96,165,250,0.4)" },
-            { key: "graded", label: "Graded Slabs", icon: "🏆", grad: "from-amberish/30 via-amberish/10", ring: "ring-amberish/50", glow: "rgba(251,191,36,0.4)" },
-            { key: "accessory", label: "Accessories", icon: "✨", grad: "from-jade/30 via-jade/10", ring: "ring-jade/50", glow: "rgba(74,222,128,0.4)" },
+            { key: "sealed", label: "Boxes & Packs", Icon: BoxIcon, from: "rgba(168,85,247,0.28)", ink: "#c4b5fd", glow: "rgba(168,85,247,0.45)" },
+            { key: "single", label: "Singles", Icon: CardsIcon, from: "rgba(34,211,238,0.28)", ink: "#67e8f9", glow: "rgba(34,211,238,0.45)" },
+            { key: "graded", label: "Graded Slabs", Icon: SlabIcon, from: "rgba(99,102,241,0.30)", ink: "#a5b4fc", glow: "rgba(99,102,241,0.45)" },
+            { key: "accessory", label: "Accessories", Icon: GemIcon, from: "rgba(236,72,153,0.26)", ink: "#f9a8d4", glow: "rgba(236,72,153,0.45)" },
           ].map((c) => {
             const n = products.filter((p) => p.category === c.key).length;
             const on = cat === c.key;
             return (
               <button key={c.key} onClick={() => { setCat(c.key); setFavOnly(false); scrollToGrid(); }}
-                className={`tile sx-card overflow-hidden p-4 sm:p-5 text-center bg-gradient-to-br ${c.grad} to-transparent ring-1 ${on ? c.ring : "ring-white/5"}`}
-                style={on ? { boxShadow: `0 12px 40px -12px ${c.glow}` } : undefined}>
-                <div className="text-3xl sm:text-4xl mb-1.5 sm:mb-2 drop-shadow">{c.icon}</div>
+                className={`tile sx-card overflow-hidden p-4 sm:p-5 text-center ring-1 ${on ? "ring-white/25" : "ring-white/5"}`}
+                style={{ backgroundImage: `linear-gradient(135deg, ${c.from}, transparent 70%)`, ...(on ? { boxShadow: `0 12px 40px -12px ${c.glow}` } : {}) }}>
+                <div className="mb-1.5 sm:mb-2 flex justify-center" style={{ color: c.ink }}><c.Icon /></div>
                 <p className="font-display tracking-[0.05em] text-[12px] sm:text-sm text-white leading-tight">{c.label}</p>
                 <p className="text-[10px] sm:text-[11px] text-[#9CA3AF] mt-0.5 num">{n} item{n === 1 ? "" : "s"}</p>
               </button>
@@ -447,7 +447,7 @@ export function ShopClient({
             <button key={b.kind} onClick={() => applyBrand(b.kind, false)}
               className={`px-4 py-2 rounded-full text-[15px] whitespace-nowrap border transition-colors shrink-0 font-medium ${
                 activeBrand === b.kind
-                  ? "border-[#f59e0b]/60 bg-[#f59e0b]/15 sx-amber"
+                  ? "border-[#22d3ee]/60 bg-[#22d3ee]/15 sx-amber"
                   : "border-[#27272A] text-[#9CA3AF] hover:text-white hover:border-[#3a3a40]"}`}>
               {b.label}
             </button>
@@ -463,12 +463,12 @@ export function ShopClient({
             <div className="flex gap-2 overflow-x-auto pb-1">
               {games.map((g) => (
                 <button key={g} onClick={() => setGame(game === g ? "" : g)}
-                  className={`px-3 py-1.5 rounded-lg text-[14px] whitespace-nowrap border transition-colors shrink-0 ${game === g ? "border-[#f59e0b]/50 sx-amber bg-[#f59e0b]/[0.1]" : "border-[#27272A] text-[#9CA3AF] hover:text-white"}`}>
+                  className={`px-3 py-1.5 rounded-lg text-[14px] whitespace-nowrap border transition-colors shrink-0 ${game === g ? "border-[#22d3ee]/50 sx-amber bg-[#22d3ee]/[0.1]" : "border-[#27272A] text-[#9CA3AF] hover:text-white"}`}>
                   {g}
                 </button>
               ))}
               <button onClick={() => setFavOnly((v) => !v)}
-                className={`px-3 py-1.5 rounded-lg text-[14px] whitespace-nowrap border transition-colors shrink-0 flex items-center gap-1.5 ${favOnly ? "border-[#f59e0b]/50 sx-amber bg-[#f59e0b]/[0.1]" : "border-[#27272A] text-[#9CA3AF] hover:text-white"}`}>
+                className={`px-3 py-1.5 rounded-lg text-[14px] whitespace-nowrap border transition-colors shrink-0 flex items-center gap-1.5 ${favOnly ? "border-[#22d3ee]/50 sx-amber bg-[#22d3ee]/[0.1]" : "border-[#27272A] text-[#9CA3AF] hover:text-white"}`}>
                 <Heart filled={favOnly} /> Wishlist
               </button>
             </div>
@@ -505,7 +505,7 @@ export function ShopClient({
                       {soldOut && <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-black/70 text-[#9CA3AF] border border-[#333]">SOLD OUT</span>}
                       {!soldOut && newestIds.has(p.id) && <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-jade/20 text-jade border border-jade/30">NEW</span>}
                       {graded && <span className="psa-metal text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full">{p.grade_company} {p.grade}</span>}
-                      {!soldOut && !graded && p.stock <= 3 && <span className="pulse-ring text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#f59e0b]/15 sx-amber border border-[#f59e0b]/40">LOW STOCK</span>}
+                      {!soldOut && !graded && p.stock <= 3 && <span className="pulse-ring text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#22d3ee]/15 sx-amber border border-[#22d3ee]/40">LOW STOCK</span>}
                     </div>
                     <button onClick={() => toggleFav(p.id)} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 backdrop-blur grid place-items-center hover:bg-black/70" aria-label="Wishlist">
                       <Heart filled={favs.has(p.id)} />
@@ -513,7 +513,7 @@ export function ShopClient({
                   </div>
                   <div className="p-3 flex flex-col flex-1">
                     <button onClick={() => { setDetail(p); setDetailImg(0); setZoom(false); }} className="text-left">
-                      <p className="text-[15px] lg:text-[17px] font-semibold text-[#F9FAFB] leading-snug line-clamp-2 hover:text-[#f59e0b] transition-colors">{p.name}</p>
+                      <p className="text-[15px] lg:text-[17px] font-semibold text-[#F9FAFB] leading-snug line-clamp-2 hover:text-[#22d3ee] transition-colors">{p.name}</p>
                     </button>
                     <p className="text-[14px] text-[#9CA3AF]/75 mt-0.5 truncate">
                       {[p.set_name, p.condition, p.rarity].filter(Boolean).join(" · ") || p.game}
@@ -634,9 +634,8 @@ function Carousel({ slide, setSlide, onCta, slideImages, slidePosters }: {
               </div>
             </div>
           ) : (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
-              <span className="absolute right-[6%] top-[14%] text-[7rem] sm:text-[10rem] opacity-25 floaty">{s.emojis[0]}</span>
-              <span className="absolute right-[26%] bottom-[8%] text-6xl sm:text-8xl opacity-20 floaty" style={{ animationDelay: "1.1s" }}>{s.emojis[1]}</span>
+            <div className="absolute right-[8%] top-1/2 -translate-y-1/2 hidden sm:block pointer-events-none" aria-hidden="true">
+              <span className="font-display text-[7rem] lg:text-[9rem] leading-none text-white/10 tracking-tight">{s.badge.split(" ")[0]}</span>
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
@@ -658,7 +657,7 @@ function Carousel({ slide, setSlide, onCta, slideImages, slidePosters }: {
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
         {SLIDES.map((s, i) => (
           <button key={s.key} onClick={() => setSlide(i)} aria-label={`Slide ${i + 1}`}
-            className={`c-dot h-2 rounded-full ${i === slide ? "w-7 bg-[#f59e0b]" : "w-2 bg-white/45 hover:bg-white/70"}`} />
+            className={`c-dot h-2 rounded-full ${i === slide ? "w-7 bg-[#22d3ee]" : "w-2 bg-white/45 hover:bg-white/70"}`} />
         ))}
       </div>
     </div>
@@ -667,7 +666,7 @@ function Carousel({ slide, setSlide, onCta, slideImages, slidePosters }: {
 
 function Heart({ filled }: { filled: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className={`w-4 h-4 ${filled ? "text-[#f59e0b] fill-[#f59e0b]" : "text-[#9CA3AF]"}`} fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.7}>
+    <svg viewBox="0 0 24 24" className={`w-4 h-4 ${filled ? "text-[#22d3ee] fill-[#22d3ee]" : "text-[#9CA3AF]"}`} fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.7}>
       <path d="M12 21s-7.5-4.6-10-9.2C.6 8.9 2 5.5 5.2 5.5c1.9 0 3.2 1.1 3.8 2.2h.2c.6-1.1 1.9-2.2 3.8-2.2 3.2 0 4.6 3.4 3.2 6.3C19.5 16.4 12 21 12 21z" transform="translate(0 -0.5)" />
     </svg>
   );
@@ -679,6 +678,23 @@ function FbIcon() {
       <path d="M13.5 21v-8h2.6l.4-3h-3V8.1c0-.86.24-1.45 1.5-1.45H17V4a20 20 0 0 0-2.3-.12c-2.3 0-3.9 1.4-3.9 4V10H8.3v3H10.8v8z" />
     </svg>
   );
+}
+
+/* Clean line icons that replace the emoji (category tiles, misc). */
+function BoxIcon() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M3 8l9-4 9 4v8l-9 4-9-4z" /><path d="M3 8l9 4 9-4M12 12v8" /></svg>);
+}
+function CardsIcon() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><rect x="7" y="4" width="11" height="15" rx="2" transform="rotate(6 12 11)" /><rect x="4" y="6" width="11" height="15" rx="2" transform="rotate(-6 10 13)" /></svg>);
+}
+function SlabIcon() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><rect x="6" y="3" width="12" height="18" rx="2" /><path d="M9 7h6" /><circle cx="12" cy="14" r="2.5" /></svg>);
+}
+function GemIcon() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7"><path d="M6 3h12l3 6-9 12L3 9z" /><path d="M3 9h18M9 3l-3 6 6 12M15 3l3 6-6 12" /></svg>);
+}
+function PinIcon() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z" /><circle cx="12" cy="10" r="2.4" /></svg>);
 }
 function TgIcon() {
   return (
@@ -727,7 +743,7 @@ function PromoBanner({ promo, hasPromo, fb, tg, ig, shopName }: {
   const text = hasPromo
     ? promo.text?.trim()
     : "Preorders, restocks & giveaways drop first on our Facebook and Telegram. Tap to follow so you never miss a hit.";
-  const badge = hasPromo ? "🔥 Latest drop" : "⭐ Stay in the loop";
+  const badge = hasPromo ? "Latest drop" : "Stay in the loop";
 
   return (
     <div className="relative rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-pop shine">
@@ -782,7 +798,7 @@ function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, to
         {imgs.length > 1 && (
           <div className="flex gap-2 px-4 pt-3 justify-center">
             {imgs.map((im, i) => (
-              <button key={i} onClick={() => { setIdx(i); setZoom(false); }} className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${i === idx ? "border-[#f59e0b]" : "border-[#27272A]"}`}>
+              <button key={i} onClick={() => { setIdx(i); setZoom(false); }} className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${i === idx ? "border-[#22d3ee]" : "border-[#27272A]"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={im} alt="" className="w-full h-full object-cover" />
               </button>
@@ -795,7 +811,7 @@ function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, to
             {!soldOut && newest && <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-jade/20 text-jade border border-jade/30">NEW</span>}
             {graded && <span className="psa-metal text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full">{p.grade_company} {p.grade}</span>}
             {price.onSale && <span className="text-[9px] font-extrabold tracking-wide px-2 py-0.5 rounded-full bg-ruby text-white">{price.badge} SALE</span>}
-            <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#f59e0b]/15 sx-amber border border-[#f59e0b]/30">{catLabel(p.category)}</span>
+            <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#22d3ee]/15 sx-amber border border-[#22d3ee]/30">{catLabel(p.category)}</span>
           </div>
           <h2 className="text-white font-semibold text-xl leading-snug">{p.name}</h2>
           <p className="text-[13px] text-[#9CA3AF] mt-1">{meta.join(" · ")}</p>
@@ -862,8 +878,8 @@ function CartDrawer({ lines, total, setQty, onClose, priceOfProduct, name, setNa
                 <div key={l.product.id} className="flex items-center gap-3">
                   {l.product.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={l.product.image} alt="" className="w-12 h-12 rounded-lg object-contain bg-[#0B0D11] border border-[#27272A] shrink-0" />
-                  ) : <span className="w-12 h-12 rounded-lg bg-[#0B0D11] grid place-items-center text-[#9CA3AF] shrink-0">★</span>}
+                    <img src={l.product.image} alt="" className="w-12 h-12 rounded-lg object-contain bg-[#0B1020] border border-[#27272A] shrink-0" />
+                  ) : <span className="w-12 h-12 rounded-lg bg-[#0B1020] grid place-items-center text-[#9CA3AF] shrink-0">★</span>}
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] text-white truncate">{l.product.name}</p>
                     <p className="num text-[13px] flex items-baseline gap-1.5">
@@ -890,8 +906,8 @@ function CartDrawer({ lines, total, setQty, onClose, priceOfProduct, name, setNa
                 <span>Delivery location</span>
                 <div className="flex gap-2">
                   <input value={location} onChange={(e) => setLocation(e.target.value)} className="input flex-1" placeholder="Address or paste a Google Maps link" />
-                  <button type="button" onClick={useMyLocation} disabled={locating} className="btn-ghost px-3 py-2 text-[12px] shrink-0 whitespace-nowrap disabled:opacity-60">
-                    📍 {locating ? "…" : "Use my location"}
+                  <button type="button" onClick={useMyLocation} disabled={locating} className="btn-ghost px-3 py-2 text-[12px] shrink-0 whitespace-nowrap disabled:opacity-60 inline-flex items-center gap-1.5">
+                    <PinIcon /> {locating ? "…" : "Use my location"}
                   </button>
                 </div>
                 {location.startsWith("http") && <a href={location} target="_blank" rel="noopener" className="text-[11px] sx-amber hover:brightness-110 mt-1 inline-block">Location pinned ✓ — preview map</a>}
