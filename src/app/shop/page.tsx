@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { getBranding } from "@/lib/branding";
 import { telegramConfigured } from "@/lib/providers/telegram";
+import { storeDiscountFrom } from "@/lib/pricing";
 import { ShopClient, type ShopProduct } from "./ShopClient";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default function ShopPage() {
   const products = db
     .prepare(
       `SELECT id, name, game, category, set_name, rarity, condition, grade_company, grade, price, stock,
-              image, image2, image3, description
+              image, image2, image3, description, discount_type, discount_value
        FROM products WHERE active = 1 ORDER BY id DESC`
     )
     .all() as ShopProduct[];
@@ -63,6 +64,7 @@ export default function ShopPage() {
       address={setting("store_address")}
       telegramUser={setting("telegram_admin_username").replace(/^@/, "")}
       telegramReady={telegramConfigured()}
+      storeDiscount={storeDiscountFrom(setting("store_discount_type"), setting("store_discount_value"))}
       facebook={setting("shop_facebook")}
       channel={setting("shop_telegram_channel")}
       promo={{

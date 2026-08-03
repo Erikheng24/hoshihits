@@ -5,6 +5,7 @@ import { getBranding } from "@/lib/branding";
 import { sendTelegram, adminChatLink, telegramConfigured, botTokenSet, getBotUsername } from "@/lib/providers/telegram";
 import { adminOrderKeyboard } from "@/lib/shop-bot";
 import { money } from "@/lib/format";
+import { priceOf, storeDiscountFrom } from "@/lib/pricing";
 
 export interface WebOrderLine {
   productId: number;
@@ -41,15 +42,24 @@ export async function placeWebOrderAction(input: PlaceOrderInput): Promise<Place
   if (!phone) return { ok: false, error: "Please enter your phone number." };
   if (!input.items?.length) return { ok: false, error: "Your cart is empty." };
 
-  // Resolve every line against the real catalog (price + availability come from us).
+  // Store-wide sale (applied to items without their own discount).
+  const setting = (k: string) =>
+    (db.prepare("SELECT value FROM settings WHERE key=?").get(k) as { value: string } | undefined)?.value ?? "";
+  const storeDiscount = storeDiscountFrom(setting("store_discount_type"), setting("store_discount_value"));
+
+  // Resolve every line against the real catalog (price + availability come from
+  // us — never the client). The discounted web-shop price is what we charge.
   const resolved: { id: number; name: string; qty: number; price: number }[] = [];
   for (const line of input.items) {
     const qty = Math.max(1, Math.round(Number(line.qty) || 0));
     const p = db
-      .prepare("SELECT id, name, price, stock, active FROM products WHERE id = ?")
-      .get(line.productId) as { id: number; name: string; price: number; stock: number; active: number } | undefined;
+      .prepare("SELECT id, name, price, stock, active, discount_type, discount_value FROM products WHERE id = ?")
+      .get(line.productId) as
+      | { id: number; name: string; price: number; stock: number; active: number; discount_type: string | null; discount_value: number | null }
+      | undefined;
     if (!p || !p.active) continue; // silently drop items that vanished
-    resolved.push({ id: p.id, name: p.name, qty, price: p.price });
+    const sale = priceOf(p, storeDiscount).sale;
+    resolved.push({ id: p.id, name: p.name, qty, price: sale });
   }
   if (!resolved.length) return { ok: false, error: "None of those items are available anymore." };
 

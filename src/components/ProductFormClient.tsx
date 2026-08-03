@@ -22,6 +22,7 @@ interface ProductLike {
   barcode?: string | null; image?: string | null;
   image2?: string | null; image3?: string | null; description?: string | null;
   price: number; cost: number; stock: number; low_stock: number;
+  discount_type?: string | null; discount_value?: number | null;
 }
 
 export function ProductFormClient({
@@ -45,6 +46,15 @@ export function ProductFormClient({
   // Extra shop photos (submitted as-is): "" = none.
   const [image2, setImage2] = useState<string>(product.image2 ?? "");
   const [image3, setImage3] = useState<string>(product.image3 ?? "");
+  // Web-shop discount: switch between % and $ off, or none.
+  const [discType, setDiscType] = useState<string>(product.discount_type ?? "");
+  const [discValue, setDiscValue] = useState<string>(
+    product.discount_type === "amount" && product.discount_value
+      ? (product.discount_value / 100).toFixed(2)
+      : product.discount_type === "percent" && product.discount_value
+      ? String(product.discount_value)
+      : ""
+  );
 
   async function pickExtra(setter: (v: string) => void, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -226,6 +236,40 @@ export function ProductFormClient({
         <div className="sm:col-span-2 pt-2">
           <p className="text-[11px] uppercase tracking-[0.16em] text-mist mb-1">Customer shop</p>
           <div className="gold-rule mb-3" />
+
+          {/* Web-shop discount for THIS item */}
+          <input type="hidden" name="discount_type" value={discType} />
+          <div className="rounded-lg border border-edge bg-panel-2 p-3 mb-4">
+            <p className="text-[13px] text-white mb-1">Discount this item (web shop)</p>
+            <p className="text-[11px] text-fog mb-2.5">Shows a sale price with the old price crossed out. Leave off for full price.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-lg border border-edge overflow-hidden">
+                {[
+                  { k: "", label: "None" },
+                  { k: "percent", label: "% off" },
+                  { k: "amount", label: "$ off" },
+                ].map((o) => (
+                  <button key={o.k} type="button" onClick={() => setDiscType(o.k)}
+                    className={`px-3 py-1.5 text-[12px] transition-colors ${discType === o.k ? "bg-gold text-ink font-semibold" : "text-mist hover:text-white"}`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              {discType && (
+                <div className="relative">
+                  {discType === "amount" && <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fog text-sm">$</span>}
+                  <input
+                    type="number" min="0" step={discType === "amount" ? "0.01" : "1"} max={discType === "percent" ? 90 : undefined}
+                    value={discValue} onChange={(e) => setDiscValue(e.target.value)}
+                    name="discount_value"
+                    className={`input num w-28 ${discType === "amount" ? "pl-6" : "pr-7"}`}
+                    placeholder={discType === "percent" ? "10" : "5.00"} />
+                  {discType === "percent" && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-fog text-sm">%</span>}
+                </div>
+              )}
+            </div>
+          </div>
+
           <input type="hidden" name="image2" value={image2} />
           <input type="hidden" name="image3" value={image3} />
           <p className="text-[12px] text-fog mb-2">Extra photos shown on your public shop (the main photo above is photo 1).</p>

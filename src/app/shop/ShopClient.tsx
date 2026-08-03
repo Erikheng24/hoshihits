@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { money } from "@/lib/format";
+import { priceOf, type StoreDiscount } from "@/lib/pricing";
 import { placeWebOrderAction, type PlaceOrderResult } from "./actions";
 
 export interface ShopProduct {
@@ -20,6 +21,8 @@ export interface ShopProduct {
   image2: string | null;
   image3: string | null;
   description: string | null;
+  discount_type: string | null;
+  discount_value: number | null;
 }
 
 const CATS = [
@@ -115,6 +118,7 @@ export function ShopClient({
   address,
   telegramUser,
   telegramReady,
+  storeDiscount,
   facebook,
   channel,
   promo,
@@ -130,6 +134,7 @@ export function ShopClient({
   address: string;
   telegramUser: string;
   telegramReady: boolean;
+  storeDiscount: StoreDiscount;
   facebook: string;
   channel: string;
   promo: Promo;
@@ -205,12 +210,15 @@ export function ShopClient({
   const featured = useMemo(() => products.filter((p) => p.stock > 0).slice(0, 10), [products]);
   const filtering = !!(q || game || cat || favOnly);
 
+  // Effective web-shop price for a product (item discount, else store-wide sale).
+  const pr = (p: ShopProduct) => priceOf(p, storeDiscount);
+
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const cartLines = Object.entries(cart)
     .filter(([, qty]) => qty > 0)
     .map(([id, qty]) => ({ product: byId.get(Number(id))!, qty }))
     .filter((l) => l.product);
-  const total = cartLines.reduce((a, l) => a + l.product.price * l.qty, 0);
+  const total = cartLines.reduce((a, l) => a + pr(l.product).sale * l.qty, 0);
   const count = cartLines.reduce((a, l) => a + l.qty, 0);
 
   const setQty = (id: number, qty: number) => {
@@ -377,7 +385,7 @@ export function ShopClient({
           <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-3 -mx-4 sm:-mx-6 px-4 sm:px-6 snap-x">
             {featured.map((p) => (
               <button key={p.id} onClick={() => { setDetail(p); setDetailImg(0); }}
-                className="shop-card sx-card overflow-hidden shrink-0 w-40 sm:w-44 snap-start text-left">
+                className="relative shop-card sx-card overflow-hidden shrink-0 w-40 sm:w-44 snap-start text-left">
                 <div className="aspect-[3/4] card-slot overflow-hidden relative">
                   {p.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -387,8 +395,14 @@ export function ShopClient({
                 </div>
                 <div className="p-2.5">
                   <p className="text-[13px] text-white line-clamp-1">{p.name}</p>
-                  <p className="num sx-amber font-bold text-[17px] mt-0.5">{money(p.price)}</p>
+                  {(() => { const pp = pr(p); return (
+                    <p className="mt-0.5 flex items-baseline gap-1.5">
+                      <span className="num sx-amber font-bold text-[17px]">{money(pp.sale)}</span>
+                      {pp.onSale && <span className="num text-[12px] text-[#9CA3AF] line-through">{money(pp.original)}</span>}
+                    </p>
+                  ); })()}
                 </div>
+                {pr(p).onSale && <span className="absolute top-2 right-2 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-ruby text-white shadow">{pr(p).badge}</span>}
               </button>
             ))}
           </div>
@@ -457,6 +471,7 @@ export function ShopClient({
                     </button>
                     {/* badges */}
                     <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+                      {pr(p).onSale && <span className="text-[10px] font-extrabold tracking-wide px-2 py-0.5 rounded-full bg-ruby text-white shadow">{pr(p).badge}</span>}
                       {soldOut && <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-black/70 text-[#9CA3AF] border border-[#333]">SOLD OUT</span>}
                       {!soldOut && newestIds.has(p.id) && <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-jade/20 text-jade border border-jade/30">NEW</span>}
                       {graded && <span className="psa-metal text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full">{p.grade_company} {p.grade}</span>}
@@ -473,8 +488,9 @@ export function ShopClient({
                     <p className="text-[14px] text-[#9CA3AF]/75 mt-0.5 truncate">
                       {[p.set_name, p.condition, p.rarity].filter(Boolean).join(" · ") || p.game}
                     </p>
-                    <div className="flex items-end justify-between mt-auto pt-2">
-                      <p className="num sx-amber font-bold text-[19px]">{money(p.price)}</p>
+                    <div className="flex items-baseline gap-2 flex-wrap mt-auto pt-2">
+                      <p className="num sx-amber font-bold text-[19px]">{money(pr(p).sale)}</p>
+                      {pr(p).onSale && <p className="num text-[13px] text-[#9CA3AF] line-through">{money(pr(p).original)}</p>}
                     </div>
                     <div className="mt-2">
                       {soldOut ? (
@@ -536,10 +552,10 @@ export function ShopClient({
       )}
 
       {detail && <Detail p={detail} imgs={imgsOf(detail)} idx={detailImg} setIdx={setDetailImg} zoom={zoom} setZoom={setZoom}
-        qty={cart[detail.id] ?? 0} setQty={setQty} add={add} fav={favs.has(detail.id)} toggleFav={toggleFav}
+        qty={cart[detail.id] ?? 0} setQty={setQty} add={add} fav={favs.has(detail.id)} toggleFav={toggleFav} price={pr(detail)}
         onClose={() => setDetail(null)} onCart={() => { setDetail(null); setCartOpen(true); }} newest={newestIds.has(detail.id)} />}
 
-      {cartOpen && <CartDrawer lines={cartLines} total={total} setQty={setQty} onClose={() => setCartOpen(false)}
+      {cartOpen && <CartDrawer lines={cartLines} total={total} setQty={setQty} onClose={() => setCartOpen(false)} priceOfProduct={pr}
         name={name} setName={setName} phone={phoneIn} setPhone={setPhoneIn} note={note} setNote={setNote}
         location={location} setLocation={setLocation}
         submitting={submitting} err={err} placeOrder={placeOrder} telegramReady={telegramReady} />}
@@ -679,9 +695,10 @@ function PromoBanner({ promo, hasPromo, fb, tg, shopName }: {
   );
 }
 
-function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, toggleFav, onClose, onCart, newest }: {
+function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, toggleFav, price, onClose, onCart, newest }: {
   p: ShopProduct; imgs: string[]; idx: number; setIdx: (n: number) => void; zoom: boolean; setZoom: (b: boolean) => void;
   qty: number; setQty: (id: number, q: number) => void; add: (id: number) => void; fav: boolean; toggleFav: (id: number) => void;
+  price: ReturnType<typeof priceOf>;
   onClose: () => void; onCart: () => void; newest: boolean;
 }) {
   const soldOut = p.stock <= 0;
@@ -714,11 +731,16 @@ function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, to
             {soldOut && <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-black/70 text-[#9CA3AF] border border-[#333]">SOLD OUT</span>}
             {!soldOut && newest && <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-jade/20 text-jade border border-jade/30">NEW</span>}
             {graded && <span className="psa-metal text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full">{p.grade_company} {p.grade}</span>}
+            {price.onSale && <span className="text-[9px] font-extrabold tracking-wide px-2 py-0.5 rounded-full bg-ruby text-white">{price.badge} SALE</span>}
             <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#f59e0b]/15 sx-amber border border-[#f59e0b]/30">{catLabel(p.category)}</span>
           </div>
           <h2 className="text-white font-semibold text-xl leading-snug">{p.name}</h2>
           <p className="text-[13px] text-[#9CA3AF] mt-1">{meta.join(" · ")}</p>
-          <p className="num text-3xl sx-amber font-bold mt-3 font-display">{money(p.price)}</p>
+          <div className="flex items-baseline gap-2.5 mt-3">
+            <p className="num text-3xl sx-amber font-bold font-display">{money(price.sale)}</p>
+            {price.onSale && <p className="num text-lg text-[#9CA3AF] line-through">{money(price.original)}</p>}
+            {price.onSale && <span className="text-[11px] font-bold text-jade">Save {money(price.off)}</span>}
+          </div>
           <p className="text-[11px] text-[#9CA3AF] num mt-0.5">{soldOut ? "Currently unavailable" : `${p.stock} in stock`}</p>
           {p.description && <p className="text-[13px] text-[#9CA3AF] mt-4 whitespace-pre-line leading-relaxed">{p.description}</p>}
           <div className="mt-6">
@@ -743,8 +765,9 @@ function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, to
   );
 }
 
-function CartDrawer({ lines, total, setQty, onClose, name, setName, phone, setPhone, note, setNote, location, setLocation, submitting, err, placeOrder, telegramReady }: {
+function CartDrawer({ lines, total, setQty, onClose, priceOfProduct, name, setName, phone, setPhone, note, setNote, location, setLocation, submitting, err, placeOrder, telegramReady }: {
   lines: { product: ShopProduct; qty: number }[]; total: number; setQty: (id: number, q: number) => void; onClose: () => void;
+  priceOfProduct: (p: ShopProduct) => ReturnType<typeof priceOf>;
   name: string; setName: (s: string) => void; phone: string; setPhone: (s: string) => void; note: string; setNote: (s: string) => void;
   location: string; setLocation: (s: string) => void;
   submitting: boolean; err: string | null; placeOrder: () => void; telegramReady: boolean;
@@ -772,7 +795,7 @@ function CartDrawer({ lines, total, setQty, onClose, name, setName, phone, setPh
         ) : (
           <>
             <div className="space-y-2.5 mb-4">
-              {lines.map((l) => (
+              {lines.map((l) => { const lp = priceOfProduct(l.product); return (
                 <div key={l.product.id} className="flex items-center gap-3">
                   {l.product.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -780,7 +803,10 @@ function CartDrawer({ lines, total, setQty, onClose, name, setName, phone, setPh
                   ) : <span className="w-12 h-12 rounded-lg bg-[#0B0D11] grid place-items-center text-[#9CA3AF] shrink-0">★</span>}
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] text-white truncate">{l.product.name}</p>
-                    <p className="num text-[13px] sx-amber font-semibold">{money(l.product.price)}</p>
+                    <p className="num text-[13px] flex items-baseline gap-1.5">
+                      <span className="sx-amber font-semibold">{money(lp.sale)}</span>
+                      {lp.onSale && <span className="text-[11px] text-[#9CA3AF] line-through">{money(lp.original)}</span>}
+                    </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button onClick={() => setQty(l.product.id, l.qty - 1)} className="btn-ghost w-7 h-7 !rounded-md">−</button>
@@ -788,7 +814,7 @@ function CartDrawer({ lines, total, setQty, onClose, name, setName, phone, setPh
                     <button onClick={() => setQty(l.product.id, l.qty + 1)} disabled={l.qty >= l.product.stock} className="btn-ghost w-7 h-7 !rounded-md disabled:opacity-40">+</button>
                   </div>
                 </div>
-              ))}
+              ); })}
             </div>
             <div className="flex justify-between items-center border-t border-dashed border-[#27272A] pt-3 mb-4">
               <span className="text-[#9CA3AF]">Total</span>

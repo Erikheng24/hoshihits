@@ -21,6 +21,8 @@ const KEYS = [
   "shop_enabled", "shop_welcome", "telegram_bot_token", "telegram_admin_chat_id", "telegram_admin_username",
   // Storefront socials + promo banner (Facebook page, Telegram channel, announcements)
   "shop_facebook", "shop_telegram_channel", "promo_title", "promo_text", "promo_cta", "promo_link",
+  // Store-wide web-shop discount (applies to items without their own discount)
+  "store_discount_type", "store_discount_value",
   // Payment instructions shown by the bot
   "payment_note",
 ];

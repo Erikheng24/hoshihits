@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS products (
   cost INTEGER NOT NULL DEFAULT 0, -- cents
   stock INTEGER NOT NULL DEFAULT 0,
   low_stock INTEGER NOT NULL DEFAULT 4,
+  discount_type TEXT,              -- 'amount' | 'percent' | NULL — web-shop discount
+  discount_value INTEGER,          -- cents (amount) or whole percent (percent)
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL
 );
@@ -311,6 +313,9 @@ function migrate(db: DbConn) {
   if (!productCols.includes("image2")) db.exec(`ALTER TABLE products ADD COLUMN image2 TEXT`);
   if (!productCols.includes("image3")) db.exec(`ALTER TABLE products ADD COLUMN image3 TEXT`);
   if (!productCols.includes("description")) db.exec(`ALTER TABLE products ADD COLUMN description TEXT`);
+  // Web-shop discounts (per product): a fixed amount or a percent off.
+  if (!productCols.includes("discount_type")) db.exec(`ALTER TABLE products ADD COLUMN discount_type TEXT`);
+  if (!productCols.includes("discount_value")) db.exec(`ALTER TABLE products ADD COLUMN discount_value INTEGER`);
   // Preorders can now carry a reference photo of the box/card the customer ordered.
   if (!cols("preorders").includes("image")) db.exec(`ALTER TABLE preorders ADD COLUMN image TEXT`);
   // Multi-item preorders: header gains a total; existing single-item preorders

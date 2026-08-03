@@ -168,6 +168,38 @@ export default function SettingsPage() {
         </form>
       </Card>
 
+      <Card title="Store-Wide Sale (web shop)" className="p-5 mb-4">
+        <p className="text-[12px] text-fog mb-4">
+          Put your whole shop on sale at once. This applies to every product that doesn&apos;t already have its own discount.
+          Set the type to <b>Off</b> to end the sale. (Items with their own discount always keep it.)
+        </p>
+        <form action={saveSettingsAction} className="flex flex-wrap items-end gap-3">
+          <label className="field">
+            <span>Sale type</span>
+            <select name="store_discount_type" className="input w-40" defaultValue={settings.store_discount_type ?? ""}>
+              <option value="">Off — no sale</option>
+              <option value="percent">% off everything</option>
+              <option value="amount">$ off everything</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Amount</span>
+            <input name="store_discount_value" type="number" min="0" step="0.01" className="input num w-32"
+              defaultValue={settings.store_discount_value ?? ""} placeholder="e.g. 10" />
+          </label>
+          <div className="flex-1" />
+          <Badge tone={settings.store_discount_type && Number(settings.store_discount_value) > 0 ? "green" : "gray"}>
+            {settings.store_discount_type === "percent" && Number(settings.store_discount_value) > 0
+              ? `SALE — ${settings.store_discount_value}% off`
+              : settings.store_discount_type === "amount" && Number(settings.store_discount_value) > 0
+              ? `SALE — $${settings.store_discount_value} off`
+              : "No store sale"}
+          </Badge>
+          <button className="btn-gold px-5 py-2 text-sm">Save sale</button>
+        </form>
+        <p className="text-[11px] text-fog mt-2">For <b>% off</b>, enter a number like 10 (= 10%). For <b>$ off</b>, enter dollars like 5 (= $5 off each item).</p>
+      </Card>
+
       <Card title="KHQR Payment (Bakong)" className="p-5 mb-4">
         <p className="text-[12px] text-fog mb-4">
           Take Cambodian QR payments at checkout. The customer scans a dynamic KHQR on a spare phone
