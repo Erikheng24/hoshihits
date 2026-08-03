@@ -383,7 +383,7 @@ export function ShopClient({
 
       {/* PROMO / FOLLOW-US BANNER */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-8">
-        <PromoBanner promo={{ ...promo, image: promoImg }} hasPromo={hasPromo} fb={fb} tg={tg} shopName={shopName} />
+        <PromoBanner promo={{ ...promo, image: promoImg }} hasPromo={hasPromo} fb={fb} tg={tg} ig={ig} shopName={shopName} />
       </section>
 
       {/* Category tiles */}
@@ -529,21 +529,17 @@ export function ShopClient({
                       <p className="num sx-amber font-bold text-[19px]">{money(pr(p).sale)}</p>
                       {pr(p).onSale && <p className="num text-[13px] text-[#9CA3AF] line-through">{money(pr(p).original)}</p>}
                     </div>
-                    <div className="mt-2 flex items-center gap-1.5">
+                    <div className="mt-2">
                       {soldOut ? (
-                        <button disabled className="flex-1 py-2 text-[13px] rounded-lg border border-[#27272A] text-[#9CA3AF] cursor-not-allowed">Sold out</button>
+                        <button disabled className="w-full py-2 text-[13px] rounded-lg border border-[#27272A] text-[#9CA3AF] cursor-not-allowed">Sold out</button>
                       ) : qty === 0 ? (
-                        <button onClick={() => add(p.id)} className="btn-amber flex-1 py-2 text-[13px]">Add to cart</button>
+                        <button onClick={() => add(p.id)} className="btn-amber w-full py-2 text-[13px]">Add to cart</button>
                       ) : (
-                        <div className="flex-1 flex items-center justify-between gap-1">
+                        <div className="flex items-center justify-between gap-1">
                           <button onClick={() => setQty(p.id, qty - 1)} className="btn-ghost w-8 h-8 !rounded-lg">−</button>
                           <span className="num text-sm">{qty}</span>
                           <button onClick={() => setQty(p.id, qty + 1)} disabled={qty >= p.stock} className="btn-ghost w-8 h-8 !rounded-lg disabled:opacity-40">+</button>
                         </div>
-                      )}
-                      {tgOrder && !soldOut && (
-                        <a href={tgOrder} target="_blank" rel="noopener" title="Order via Telegram"
-                          className="btn-tg w-9 h-9 rounded-lg grid place-items-center shrink-0"><TgIcon /></a>
                       )}
                     </div>
                   </div>
@@ -771,10 +767,10 @@ function ContactModal({ onClose, shopName, tagline, tgOrder, msg, adminLink, adm
  * image, button) when set; otherwise a bright "follow us" card. Always surfaces
  * the Facebook page + Telegram channel so customers can follow drops.
  */
-function PromoBanner({ promo, hasPromo, fb, tg, shopName }: {
-  promo: Promo; hasPromo: boolean; fb: string; tg: string; shopName: string;
+function PromoBanner({ promo, hasPromo, fb, tg, ig, shopName }: {
+  promo: Promo; hasPromo: boolean; fb: string; tg: string; ig: string; shopName: string;
 }) {
-  if (!hasPromo && !fb && !tg) return null;
+  if (!hasPromo && !fb && !tg && !ig) return null;
   const title = hasPromo ? (promo.title?.trim() || "New drop!") : `Follow ${shopName}`;
   const text = hasPromo
     ? promo.text?.trim()
@@ -802,6 +798,7 @@ function PromoBanner({ promo, hasPromo, fb, tg, shopName }: {
             )}
             {fb && <a href={fb} target="_blank" rel="noopener" className="btn-fb px-5 py-3 text-sm rounded-lg gap-2"><FbIcon /> Facebook</a>}
             {tg && <a href={tg} target="_blank" rel="noopener" className="btn-tg px-5 py-3 text-sm rounded-lg gap-2"><TgIcon /> Telegram</a>}
+            {ig && <a href={ig} target="_blank" rel="noopener" className="btn-ig px-5 py-3 text-sm rounded-lg gap-2"><IgIcon /> Instagram</a>}
           </div>
         </div>
       </div>
