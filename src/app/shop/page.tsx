@@ -71,6 +71,7 @@ export default function ShopPage() {
       messenger={setting("shop_messenger")}
       telegramOrder={setting("shop_telegram_order")}
       adminUser={setting("telegram_admin_username").replace(/^@/, "")}
+      bgImage={setting("shop_bg_image").startsWith("data:image/") ? setting("shop_bg_image") : ""}
       promo={{
         title: setting("promo_title"),
         text: setting("promo_text"),

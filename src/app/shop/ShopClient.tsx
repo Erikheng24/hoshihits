@@ -139,6 +139,7 @@ export function ShopClient({
   messenger,
   telegramOrder,
   adminUser,
+  bgImage,
   promo,
 }: {
   products: ShopProduct[];
@@ -159,6 +160,7 @@ export function ShopClient({
   messenger: string;
   telegramOrder: string;
   adminUser: string;
+  bgImage: string;
   promo: Promo;
 }) {
   const [q, setQ] = useState("");
@@ -325,8 +327,21 @@ export function ShopClient({
 
   return (
     <>
-      {/* Ambient blurred colour halos behind everything (atmosphere, no IP art) */}
+      {/* Full-page background: owner-uploaded image (with a readability overlay),
+          otherwise the holo ambient halos + floating cards. */}
       <div className="fixed inset-0 z-0 pointer-events-none sx-bg overflow-hidden" aria-hidden="true">
+        {bgImage ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(9,12,26,0.86), rgba(9,12,26,0.64) 42%, rgba(9,12,26,0.9))" }} />
+            <span className="spark" style={{ left: "7%", top: "24%", animationDelay: "0s" }} />
+            <span className="spark" style={{ left: "93%", top: "30%", animationDelay: "1.2s" }} />
+            <span className="spark" style={{ left: "50%", top: "9%", animationDelay: "2.1s" }} />
+            <span className="spark" style={{ left: "88%", top: "84%", animationDelay: "0.7s" }} />
+          </>
+        ) : (
+          <>
         <span className="absolute rounded-full" style={{ width: 460, height: 460, left: "-8%", top: "6%", filter: "blur(70px)", opacity: 0.20, background: "radial-gradient(circle,#22D3EE,transparent 70%)" }} />
         <span className="absolute rounded-full" style={{ width: 520, height: 520, right: "-10%", top: "2%", filter: "blur(70px)", opacity: 0.18, background: "radial-gradient(circle,#A855F7,transparent 70%)" }} />
         <span className="absolute rounded-full" style={{ width: 480, height: 480, left: "12%", top: "48%", filter: "blur(70px)", opacity: 0.15, background: "radial-gradient(circle,#6366F1,transparent 70%)" }} />
@@ -351,6 +366,8 @@ export function ShopClient({
         ].map(([l, t, d], i) => (
           <span key={`s${i}`} className="spark" style={{ left: l, top: t, animationDelay: d }} />
         ))}
+          </>
+        )}
       </div>
 
       <main className="relative z-10 min-h-screen text-[#F9FAFB] pb-32">

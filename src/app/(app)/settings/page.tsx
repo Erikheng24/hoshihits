@@ -168,6 +168,17 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          <div className="sm:col-span-2 pt-1">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-mist mb-1">Full-page background image</p>
+            <div className="gold-rule mb-2" />
+            <p className="text-[12px] text-fog mb-3">
+              Fills the whole shop background behind everything (a dark overlay keeps text readable). Upload a wide image, or <b>Remove</b> to go back to the default holo background. Use your own photos or art you have the rights to.
+            </p>
+            <ImageUploadField name="shop_bg_image" label="Background image" max={1600}
+              hint="Wide landscape works best (e.g. 1600×900)."
+              initial={settings.shop_bg_image?.startsWith("data:image/") ? settings.shop_bg_image : null} />
+          </div>
+
           <div className="sm:col-span-2 flex items-center justify-between gap-3 flex-wrap">
             <Badge tone={settings.promo_title || settings.promo_image ? "green" : "gray"}>
               {settings.promo_title || settings.promo_image ? "Promo live on shop" : "Follow-us banner only"}
