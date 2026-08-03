@@ -117,6 +117,15 @@ export default function SettingsPage() {
           <label className="field"><span>Telegram channel (link or @name)</span>
             <input name="shop_telegram_channel" className="input" defaultValue={settings.shop_telegram_channel ?? ""} placeholder="e.g. @HoshiHits or t.me/HoshiHits" />
           </label>
+          <label className="field"><span>Telegram order chat (link or @name)</span>
+            <input name="shop_telegram_order" className="input" defaultValue={settings.shop_telegram_order ?? ""} placeholder="e.g. t.me/hoshihit_tcg" />
+          </label>
+          <label className="field"><span>Messenger link (m.me/…)</span>
+            <input name="shop_messenger" className="input" defaultValue={settings.shop_messenger ?? ""} placeholder="e.g. m.me/YourPage" />
+          </label>
+          <label className="field"><span>Instagram (link or @name)</span>
+            <input name="shop_instagram" className="input" defaultValue={settings.shop_instagram ?? ""} placeholder="e.g. @hoshihits_tcg" />
+          </label>
 
           <div className="sm:col-span-2 pt-1">
             <p className="text-[11px] uppercase tracking-[0.16em] text-mist mb-1">Promo banner (optional)</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { money } from "@/lib/format";
 import { priceOf, type StoreDiscount } from "@/lib/pricing";
 import { placeWebOrderAction, type PlaceOrderResult } from "./actions";
@@ -65,6 +65,20 @@ const tgUrl = (v: string) => {
   if (s.includes("t.me")) return `https://${s.replace(/^\/+/, "")}`;
   return `https://t.me/${s.replace(/^@/, "")}`;
 };
+const igUrl = (v: string) => {
+  const s = v.trim();
+  if (!s) return "";
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.includes("instagram.com")) return `https://${s.replace(/^\/+/, "")}`;
+  return `https://instagram.com/${s.replace(/^@/, "")}`;
+};
+const msgUrl = (v: string) => {
+  const s = v.trim();
+  if (!s) return "";
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.includes("m.me") || s.includes("messenger.com")) return `https://${s.replace(/^\/+/, "")}`;
+  return `https://m.me/${s.replace(/^@/, "")}`;
+};
 
 // Hero carousel slides — franchise-themed scenes (gradient art, no character IP).
 const SLIDES = [
@@ -121,6 +135,10 @@ export function ShopClient({
   storeDiscount,
   facebook,
   channel,
+  instagram,
+  messenger,
+  telegramOrder,
+  adminUser,
   promo,
 }: {
   products: ShopProduct[];
@@ -137,6 +155,10 @@ export function ShopClient({
   storeDiscount: StoreDiscount;
   facebook: string;
   channel: string;
+  instagram: string;
+  messenger: string;
+  telegramOrder: string;
+  adminUser: string;
   promo: Promo;
 }) {
   const [q, setQ] = useState("");
@@ -152,6 +174,7 @@ export function ShopClient({
   const [zoom, setZoom] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [slide, setSlide] = useState(0);
+  const [contactOpen, setContactOpen] = useState(false);
   const [name, setName] = useState("");
   const [phoneIn, setPhoneIn] = useState("");
   const [note, setNote] = useState("");
@@ -190,6 +213,11 @@ export function ShopClient({
   // Socials (full URLs) + whether the owner has posted a promo.
   const fb = fbUrl(facebook);
   const tg = tgUrl(channel);
+  const ig = igUrl(instagram);
+  const msg = msgUrl(messenger);
+  const tgOrder = tgUrl(telegramOrder) || (adminUser ? `https://t.me/${adminUser}` : "");
+  const adminLink = adminUser ? `https://t.me/${adminUser}` : "";
+  const hasContact = !!(tgOrder || msg || adminLink || tg || fb || ig);
   const promoImg = promo.image?.startsWith("data:image/") ? promo.image : "";
   const hasPromo = !!(promo.title?.trim() || promo.text?.trim() || promoImg);
 
@@ -298,7 +326,17 @@ export function ShopClient({
   }
 
   return (
-    <main className="min-h-screen sx-bg text-[#F9FAFB] pb-32">
+    <>
+      {/* Ambient blurred colour halos behind everything (atmosphere, no IP art) */}
+      <div className="fixed inset-0 z-0 pointer-events-none sx-bg overflow-hidden" aria-hidden="true">
+        <span className="absolute rounded-full" style={{ width: 460, height: 460, left: "-8%", top: "6%", filter: "blur(70px)", opacity: 0.18, background: "radial-gradient(circle,#FFE600,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 520, height: 520, right: "-10%", top: "2%", filter: "blur(70px)", opacity: 0.16, background: "radial-gradient(circle,#FF3300,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 480, height: 480, left: "12%", top: "48%", filter: "blur(70px)", opacity: 0.14, background: "radial-gradient(circle,#FF5500,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 560, height: 560, right: "-6%", top: "58%", filter: "blur(70px)", opacity: 0.15, background: "radial-gradient(circle,#3B82F6,transparent 70%)" }} />
+        <span className="absolute rounded-full" style={{ width: 500, height: 500, left: "40%", bottom: "-12%", filter: "blur(70px)", opacity: 0.14, background: "radial-gradient(circle,#FFB800,transparent 70%)" }} />
+      </div>
+
+      <main className="relative z-10 min-h-screen text-[#F9FAFB] pb-32">
       {/* Sticky header */}
       <header className={`fixed top-0 inset-x-0 z-40 transition-all duration-300 ${scrolled ? "glass border-b border-[#27272A] py-2.5" : "py-3 bg-gradient-to-b from-black/60 to-transparent"}`}>
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 flex items-center gap-3">
@@ -312,11 +350,10 @@ export function ShopClient({
             <span className="font-display tracking-[0.14em] text-gold-grad text-sm truncate">{shopName.toUpperCase()}</span>
           </button>
           <div className="flex-1" />
-          {fb && (
-            <a href={fb} target="_blank" rel="noopener" aria-label="Facebook" className="btn-fb w-9 h-9 rounded-lg grid place-items-center shrink-0"><FbIcon /></a>
-          )}
-          {tg && (
-            <a href={tg} target="_blank" rel="noopener" aria-label="Telegram channel" className="btn-tg w-9 h-9 rounded-lg grid place-items-center shrink-0"><TgIcon /></a>
+          {hasContact && (
+            <button onClick={() => setContactOpen(true)} className="btn-amber px-3 sm:px-4 py-2 text-[13px] shrink-0">
+              <span className="sm:hidden">📩</span><span className="hidden sm:inline">📩 Quick Order</span>
+            </button>
           )}
           <button onClick={() => setCartOpen(true)} className="relative btn-ghost px-3.5 py-2 text-sm">
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M6 6h15l-1.5 9h-12z" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /><path d="M6 6 5 3H2" /></svg>
@@ -455,7 +492,7 @@ export function ShopClient({
             <p className="text-[#9CA3AF]">Nothing here yet — try another search or category.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mt-6">
             {filtered.map((p, i) => {
               const qty = cart[p.id] ?? 0;
               const soldOut = p.stock <= 0;
@@ -492,17 +529,21 @@ export function ShopClient({
                       <p className="num sx-amber font-bold text-[19px]">{money(pr(p).sale)}</p>
                       {pr(p).onSale && <p className="num text-[13px] text-[#9CA3AF] line-through">{money(pr(p).original)}</p>}
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-2 flex items-center gap-1.5">
                       {soldOut ? (
-                        <button disabled className="w-full py-2 text-[13px] rounded-lg border border-[#27272A] text-[#9CA3AF] cursor-not-allowed">Sold out</button>
+                        <button disabled className="flex-1 py-2 text-[13px] rounded-lg border border-[#27272A] text-[#9CA3AF] cursor-not-allowed">Sold out</button>
                       ) : qty === 0 ? (
-                        <button onClick={() => add(p.id)} className="btn-amber w-full py-2 text-[13px]">Add to cart</button>
+                        <button onClick={() => add(p.id)} className="btn-amber flex-1 py-2 text-[13px]">Add to cart</button>
                       ) : (
-                        <div className="flex items-center justify-between gap-1">
+                        <div className="flex-1 flex items-center justify-between gap-1">
                           <button onClick={() => setQty(p.id, qty - 1)} className="btn-ghost w-8 h-8 !rounded-lg">−</button>
                           <span className="num text-sm">{qty}</span>
                           <button onClick={() => setQty(p.id, qty + 1)} disabled={qty >= p.stock} className="btn-ghost w-8 h-8 !rounded-lg disabled:opacity-40">+</button>
                         </div>
+                      )}
+                      {tgOrder && !soldOut && (
+                        <a href={tgOrder} target="_blank" rel="noopener" title="Order via Telegram"
+                          className="btn-tg w-9 h-9 rounded-lg grid place-items-center shrink-0"><TgIcon /></a>
                       )}
                     </div>
                   </div>
@@ -516,31 +557,36 @@ export function ShopClient({
       {/* Footer */}
       <footer className="max-w-[1440px] mx-auto px-4 sm:px-6 mt-20">
         <div className="rule-gold mb-8" />
-        <div className="grid sm:grid-cols-3 gap-6 text-center sm:text-left">
+        <div className="grid sm:grid-cols-3 gap-8 text-center sm:text-left">
+          {/* Brand */}
           <div>
-            <p className="font-display text-lg text-gold-grad tracking-wide">{shopName.toUpperCase()}</p>
-            <p className="text-[#9CA3AF] text-[13px] mt-1">{tagline}</p>
+            <p className="font-display text-lg text-gold-grad tracking-wide">🇰🇭 {shopName.toUpperCase()}</p>
+            <p className="text-[#9CA3AF] text-[13px] mt-1">{tagline || "Collect • Trade • Chase"}</p>
+            {address && <p className="text-[#9CA3AF] text-[13px] mt-3">{address}</p>}
+            {phone && <p className="text-[#9CA3AF] text-[13px] num">{phone}</p>}
           </div>
-          <div className="text-[13px] text-[#9CA3AF] space-y-1">
-            <p className="text-white uppercase tracking-[0.2em] text-[10px] mb-1.5">Visit / Contact</p>
-            {address && <p>{address}</p>}
-            {phone && <p className="num">{phone}</p>}
-            {telegramUser && <a href={`https://t.me/${telegramUser}`} target="_blank" rel="noopener" className="sx-amber hover:brightness-110 block">@{telegramUser}</a>}
-            {(fb || tg) && (
-              <div className="flex items-center justify-center sm:justify-start gap-2 pt-2">
-                {fb && <a href={fb} target="_blank" rel="noopener" aria-label="Facebook" className="btn-fb w-9 h-9 rounded-lg grid place-items-center"><FbIcon /></a>}
-                {tg && <a href={tg} target="_blank" rel="noopener" aria-label="Telegram channel" className="btn-tg w-9 h-9 rounded-lg grid place-items-center"><TgIcon /></a>}
-              </div>
-            )}
+
+          {/* Order with us */}
+          <div>
+            <p className="text-white uppercase tracking-[0.2em] text-[10px] mb-3">Order with us</p>
+            <div className="flex flex-col gap-2 items-stretch">
+              {tgOrder && <FooterPill href={tgOrder} cls="btn-tg" icon={<TgIcon />} label="Telegram Order" />}
+              {msg && <FooterPill href={msg} cls="btn-msg" icon={<MsgIcon />} label="Messenger Order" />}
+              {adminLink && <FooterPill href={adminLink} cls="btn-ghost" icon={<TgIcon />} label={adminUser ? `Support @${adminUser}` : "Admin support"} />}
+            </div>
           </div>
-          <div className="text-[13px] text-[#9CA3AF] space-y-1.5">
-            <p className="text-white uppercase tracking-[0.2em] text-[10px] mb-1.5">Why shop with us</p>
-            <p>✦ Authentic Japanese product</p>
-            <p>✦ Order &amp; pay easily on Telegram</p>
-            <p>✦ Trusted local card shop</p>
+
+          {/* Follow us */}
+          <div>
+            <p className="text-white uppercase tracking-[0.2em] text-[10px] mb-3">Follow us</p>
+            <div className="flex flex-col gap-2 items-stretch">
+              {tg && <FooterPill href={tg} cls="btn-tg" icon={<TgIcon />} label="Telegram Channel" />}
+              {fb && <FooterPill href={fb} cls="btn-fb" icon={<FbIcon />} label="Facebook Page" />}
+              {ig && <FooterPill href={ig} cls="btn-ig" icon={<IgIcon />} label="Instagram" />}
+            </div>
           </div>
         </div>
-        <p className="text-center text-[#9CA3AF] text-[11px] mt-10 pb-8">© {new Date().getFullYear()} {shopName}. Chase the hits. ★</p>
+        <p className="text-center text-[#9CA3AF] text-[11px] mt-10 pb-8">© {new Date().getFullYear()} {shopName}. Collect • Trade • Chase ★</p>
       </footer>
 
       {/* Sticky cart bar */}
@@ -559,7 +605,13 @@ export function ShopClient({
         name={name} setName={setName} phone={phoneIn} setPhone={setPhoneIn} note={note} setNote={setNote}
         location={location} setLocation={setLocation}
         submitting={submitting} err={err} placeOrder={placeOrder} telegramReady={telegramReady} />}
-    </main>
+
+      {contactOpen && (
+        <ContactModal onClose={() => setContactOpen(false)} shopName={shopName} tagline={tagline}
+          tgOrder={tgOrder} msg={msg} adminLink={adminLink} adminUser={adminUser} tg={tg} fb={fb} ig={ig} />
+      )}
+      </main>
+    </>
   );
 }
 
@@ -649,6 +701,68 @@ function TgIcon() {
     <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
       <path d="M21.9 4.3 18.6 20c-.24 1.1-.9 1.36-1.83.85l-5.05-3.72-2.44 2.35c-.27.27-.5.5-1 .5l.36-5.14L18.9 6.16c.4-.36-.09-.56-.63-.2L6.75 13.2 1.8 11.66c-1.07-.34-1.1-1.07.23-1.58l19.32-7.45c.9-.32 1.68.22 1.55 1.67z" />
     </svg>
+  );
+}
+function MsgIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden="true">
+      <path d="M12 2C6.3 2 2 6.2 2 11.6c0 2.9 1.3 5.4 3.4 7.1V22l3.1-1.7c.8.2 1.7.3 2.5.3 5.7 0 10-4.2 10-9.6C21 6.2 17.7 2 12 2zm1 12.3-2.6-2.7-4.9 2.7 5.4-5.7 2.6 2.7 4.8-2.7-5.3 5.7z" />
+    </svg>
+  );
+}
+function IgIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Full-width brand pill used in the footer contact columns. */
+function FooterPill({ href, cls, icon, label }: { href: string; cls: string; icon: ReactNode; label: string }) {
+  return (
+    <a href={href} target="_blank" rel="noopener"
+      className={`${cls} rounded-lg px-3.5 py-2.5 text-[13px] font-medium flex items-center gap-2.5 justify-center sm:justify-start`}>
+      {icon} {label}
+    </a>
+  );
+}
+
+/**
+ * Contact / direct-order hub. Opens from the header "Quick Order" button and
+ * lists every way to order or follow — Telegram, Messenger, Facebook, Instagram.
+ */
+function ContactModal({ onClose, shopName, tagline, tgOrder, msg, adminLink, adminUser, tg, fb, ig }: {
+  onClose: () => void; shopName: string; tagline: string;
+  tgOrder: string; msg: string; adminLink: string; adminUser: string; tg: string; fb: string; ig: string;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/80 animate-fadein" onClick={onClose} />
+      <div className="relative sx-glass shadow-pop w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-6 animate-rise">
+        <button onClick={onClose} className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-black/50 text-white grid place-items-center hover:bg-black/70">×</button>
+        <div className="text-center mb-5">
+          <p className="font-display text-xl text-gold-grad tracking-wide">🇰🇭 {shopName.toUpperCase()}</p>
+          <p className="text-[#9CA3AF] text-[12px] mt-1">{tagline || "Collect • Trade • Chase"}</p>
+        </div>
+
+        <p className="text-white uppercase tracking-[0.2em] text-[10px] mb-2">Order now</p>
+        <div className="flex flex-col gap-2 mb-5">
+          {tgOrder && <FooterPill href={tgOrder} cls="btn-tg" icon={<TgIcon />} label="Order on Telegram" />}
+          {msg && <FooterPill href={msg} cls="btn-msg" icon={<MsgIcon />} label="Order on Messenger" />}
+          {adminLink && <FooterPill href={adminLink} cls="btn-ghost" icon={<TgIcon />} label={adminUser ? `Support — @${adminUser}` : "Admin support DM"} />}
+        </div>
+
+        <p className="text-white uppercase tracking-[0.2em] text-[10px] mb-2">Follow for drops</p>
+        <div className="flex flex-col gap-2">
+          {tg && <FooterPill href={tg} cls="btn-tg" icon={<TgIcon />} label="Telegram Channel" />}
+          {fb && <FooterPill href={fb} cls="btn-fb" icon={<FbIcon />} label="Facebook Page" />}
+          {ig && <FooterPill href={ig} cls="btn-ig" icon={<IgIcon />} label="Instagram" />}
+        </div>
+      </div>
+    </div>
   );
 }
 

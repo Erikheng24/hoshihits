@@ -67,6 +67,10 @@ export default function ShopPage() {
       storeDiscount={storeDiscountFrom(setting("store_discount_type"), setting("store_discount_value"))}
       facebook={setting("shop_facebook")}
       channel={setting("shop_telegram_channel")}
+      instagram={setting("shop_instagram")}
+      messenger={setting("shop_messenger")}
+      telegramOrder={setting("shop_telegram_order")}
+      adminUser={setting("telegram_admin_username").replace(/^@/, "")}
       promo={{
         title: setting("promo_title"),
         text: setting("promo_text"),

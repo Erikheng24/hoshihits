@@ -296,13 +296,44 @@ label.field > span {
 .tile:active { transform: translateY(-1px) scale(0.99); }
 
 /* ---- Shop design system v2 (space charcoal + amber gold) ---------------- */
-.sx-bg { background: #0B0D11; }
+.sx-bg { background: #090A0F; }
 .sx-card {
-  background: #161922;
-  border: 1px solid #27272A;
+  background: rgba(18, 21, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px -16px rgba(0, 0, 0, 0.8);
 }
+/* Glassmorphism only on pointer devices (desktop) — avoids 100+ blur layers janking phones. */
+@media (min-width: 1024px) and (hover: hover) {
+  .sx-card { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+}
+.sx-glass {
+  background: rgba(18, 21, 30, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+/* Ambient blurred colour halos — the "character light" atmosphere (no IP). */
+.ambient { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.ambient span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.18;
+}
+/* Messenger + Instagram brand buttons (Telegram/Facebook defined below). */
+.btn-msg {
+  background: linear-gradient(160deg, #00b2ff, #006aff 55%, #a033ff);
+  color: #fff;
+  box-shadow: 0 8px 20px -10px rgba(0, 106, 255, 0.8);
+}
+.btn-ig {
+  background: linear-gradient(135deg, #f58529, #dd2a7b 45%, #8134af 75%, #515bd4);
+  color: #fff;
+  box-shadow: 0 8px 20px -10px rgba(221, 42, 123, 0.8);
+}
+.btn-msg:hover, .btn-ig:hover { filter: brightness(1.08); }
+.btn-msg:active, .btn-ig:active { transform: translateY(1px); }
 .sx-amber { color: #f59e0b; }
 .btn-amber {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
