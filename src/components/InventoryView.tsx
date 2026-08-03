@@ -7,7 +7,7 @@ import { Icon } from "@/components/icons";
 import { SearchToolbar } from "@/components/SearchToolbar";
 import { ProductFormClient } from "@/components/ProductFormClient";
 import { ScanToAddButton } from "@/components/ScanToAddButton";
-import { saveProductAction, adjustStockAction, archiveProductAction } from "@/app/(app)/inventory/actions";
+import { saveProductAction, adjustStockAction, archiveProductAction, setProductDiscountAction } from "@/app/(app)/inventory/actions";
 import { enrichScan, quickAddProductAction, identifyPhotoAction } from "@/app/(app)/inventory/enrich";
 
 export const GAMES = [
@@ -165,6 +165,7 @@ export function InventoryView({
               <th className="text-right">Price</th>
               <th className="text-right">Cost</th>
               <th className="text-right">Margin</th>
+              <th className="text-center">Sale</th>
               <th className="text-center">Stock</th>
               <th className="text-right">Actions</th>
             </tr>
@@ -201,6 +202,21 @@ export function InventoryView({
                   <td className="num text-right text-white">{money(p.price)}</td>
                   <td className="num text-right text-fog">{money(p.cost)}</td>
                   <td className={`num text-right ${margin >= 30 ? "text-jade" : margin >= 15 ? "text-amberish" : "text-ruby"}`}>{margin.toFixed(0)}%</td>
+                  <td className="text-center">
+                    <form action={setProductDiscountAction} className="inline-flex items-center gap-1">
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="returnTo" value={basePath} />
+                      <select name="discount_type" defaultValue={p.discount_type ?? ""} className="input !w-12 !px-1 !py-1 text-[12px] shrink-0" title="Discount type">
+                        <option value="">—</option>
+                        <option value="percent">%</option>
+                        <option value="amount">$</option>
+                      </select>
+                      <input name="discount_value" type="number" min="0" step="0.01"
+                        defaultValue={p.discount_type === "amount" ? (p.discount_value / 100).toFixed(2) : p.discount_type === "percent" ? p.discount_value : ""}
+                        className="input num !w-14 !px-1.5 !py-1 text-[12px] shrink-0" placeholder="0" title="Discount amount" />
+                      <button className="btn-ghost w-6 h-6 !rounded-md shrink-0" title="Save discount"><Icon name="check" className="w-3 h-3" /></button>
+                    </form>
+                  </td>
                   <td className="text-center">
                     <div className="inline-flex items-center gap-1.5">
                       <form action={adjustStockAction}>

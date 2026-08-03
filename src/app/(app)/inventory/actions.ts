@@ -127,6 +127,26 @@ export async function saveProductAction(formData: FormData) {
   redirect(returnTo);
 }
 
+/** Quick web-shop discount setter from the inventory list (no full edit form). */
+export async function setProductDiscountAction(formData: FormData) {
+  const user = requireModule("inventory");
+  const db = getDb();
+  const id = Number(formData.get("id"));
+  const returnTo = String(formData.get("returnTo") || "/inventory");
+  const dType = String(formData.get("discount_type") ?? "");
+  let dVal = 0;
+  if (dType === "percent") dVal = Math.max(0, Math.min(90, Math.round(Number(formData.get("discount_value") ?? 0))));
+  else if (dType === "amount") dVal = toCents(formData.get("discount_value"));
+  const discount_type = (dType === "percent" || dType === "amount") && dVal > 0 ? dType : null;
+  const discount_value = discount_type ? dVal : null;
+  const p = db.prepare("SELECT name FROM products WHERE id=?").get(id) as { name: string } | undefined;
+  if (!p) throw new Error("Product not found.");
+  db.prepare("UPDATE products SET discount_type=?, discount_value=? WHERE id=?").run(discount_type, discount_value, id);
+  audit(user.id, "inventory.discount", "product", id, `${p.name}: ${discount_type ? `${discount_type} ${discount_value}` : "cleared"}`);
+  revalidateAll();
+  redirect(returnTo);
+}
+
 export async function adjustStockAction(formData: FormData) {
   const user = requireModule("inventory");
   const db = getDb();
