@@ -1,10 +1,32 @@
+import type { Metadata } from "next";
 import { getDb } from "@/lib/db";
 import { storeDiscountFrom } from "@/lib/pricing";
 import { ShopClient, type ShopProduct } from "./ShopClient";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Shop — HoshiHits" };
+/** Rich link preview when the shop URL is shared on Telegram / Facebook / etc. */
+export async function generateMetadata(): Promise<Metadata> {
+  const rows = getDb()
+    .prepare("SELECT key, value FROM settings WHERE key IN ('store_name','store_tagline','shop_welcome','app_base_url')")
+    .all() as { key: string; value: string }[];
+  const m = new Map(rows.map((r) => [r.key, r.value]));
+  const name = (m.get("store_name") || "HoshiHits").trim();
+  const desc = (m.get("shop_welcome") || m.get("store_tagline") ||
+    "Authentic Pokémon & One Piece trading cards — singles, booster boxes & PSA graded slabs. Order easily on Telegram.").trim();
+  const base = (m.get("app_base_url") || "https://hoshihits-production-96ce.up.railway.app").replace(/\/+$/, "");
+  const title = `${name} — TCG Card Shop`;
+  return {
+    metadataBase: new URL(base),
+    title,
+    description: desc,
+    openGraph: {
+      title, description: desc, url: `${base}/shop`, siteName: name, type: "website",
+      images: [{ url: `${base}/og.png`, width: 1200, height: 630, alt: name }],
+    },
+    twitter: { card: "summary_large_image", title, description: desc, images: [`${base}/og.png`] },
+  };
+}
 
 /**
  * Public storefront (no login). Customers browse products, build a cart, and
