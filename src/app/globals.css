@@ -234,6 +234,10 @@ label.field > span {
 }
 .pop-in { animation: pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
+/* Camera scanner: sweeping scan line inside the aiming box. */
+@keyframes scanline { 0% { top: 6%; } 50% { top: 90%; } 100% { top: 6%; } }
+.scanline { animation: scanline 2.4s ease-in-out infinite; }
+
 /* ---------------------------------------------------------------------------
    Storefront — playful TCG energy (Pokémon / One Piece taste)
 --------------------------------------------------------------------------- */

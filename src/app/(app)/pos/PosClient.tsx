@@ -284,20 +284,25 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex gap-2 mb-3">
           <div className="relative flex-1">
-            <Icon name="scan" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-fog" />
+            <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-fog" />
             <input
               ref={searchRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={onSearchKey}
-              className="input pl-9"
-              placeholder="Search, or scan QR / barcode / SKU…"
+              className="input pl-9 pr-11"
+              placeholder="Search or scan…"
               autoFocus
             />
+            <button
+              type="button"
+              onClick={() => setScanOpen(true)}
+              title="Scan a slab QR / barcode with the camera"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg text-gold hover:bg-gold/10 grid place-items-center"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10" /></svg>
+            </button>
           </div>
-          <button onClick={() => setScanOpen(true)} className="btn-gold px-3 py-2 text-sm shrink-0" title="Scan a slab QR / barcode with the camera">
-            <Icon name="scan" className="w-4 h-4" /> Scan
-          </button>
           <a
             href="/display"
             target="_blank"

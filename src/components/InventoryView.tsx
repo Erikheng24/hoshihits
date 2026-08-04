@@ -7,7 +7,6 @@ import { Icon } from "@/components/icons";
 import { SearchToolbar } from "@/components/SearchToolbar";
 import { ProductFormClient } from "@/components/ProductFormClient";
 import { ScanToAddButton } from "@/components/ScanToAddButton";
-import { InventoryScanButton } from "@/components/InventoryScanButton";
 import { saveProductAction, adjustStockAction, archiveProductAction, setProductDiscountAction } from "@/app/(app)/inventory/actions";
 import { enrichScan, quickAddProductAction, identifyPhotoAction } from "@/app/(app)/inventory/enrich";
 
@@ -122,7 +121,6 @@ export function InventoryView({
         actions={
           <>
             <ReportActions section={mode === "single" ? "singles" : mode === "graded" ? "graded" : "inventory"} />
-            <InventoryScanButton basePath={basePath} />
             <ScanToAddButton enrich={enrichScan} quickAdd={quickAddProductAction} identify={identifyPhotoAction} games={GAMES} initialUsage={aiUsage} />
             <Link href={withParam("new", "1")} className="btn-ghost px-4 py-2 text-sm">
               <Icon name="plus" className="w-4 h-4" /> Add manually
@@ -145,7 +143,8 @@ export function InventoryView({
       </div>
 
       <SearchToolbar
-        placeholder="Search name, SKU, barcode, set…"
+        placeholder="Search name, SKU, cert, barcode…  or scan →"
+        scan
         filters={[
           { name: "game", label: "All games", options: GAMES.map((g) => ({ value: g, label: g })) },
           ...(mode === "all"
