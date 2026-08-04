@@ -10,7 +10,7 @@ export default function PosPage() {
   const db = getDb();
   const products = db
     .prepare(
-      `SELECT id, sku, barcode, name, game, category, set_name, price, stock, grade_company, grade, condition,
+      `SELECT id, sku, barcode, cert_number, name, game, category, set_name, price, stock, grade_company, grade, condition,
               (image IS NOT NULL AND image != '') AS has_image
        FROM products WHERE active=1 ORDER BY game, name`
     )

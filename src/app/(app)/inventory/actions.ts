@@ -127,6 +127,23 @@ export async function saveProductAction(formData: FormData) {
   redirect(returnTo);
 }
 
+/** Is this grading cert already in stock? Used to warn before adding a duplicate slab. */
+export async function checkCertAction(
+  cert: string,
+  excludeId?: number
+): Promise<{ exists: boolean; id?: number; sku?: string; name?: string; stock?: number; grade?: string; grade_company?: string }> {
+  requireModule("inventory");
+  const c = (cert ?? "").trim();
+  if (!c) return { exists: false };
+  const db = getDb();
+  const p = db
+    .prepare("SELECT id, sku, name, stock, grade, grade_company FROM products WHERE cert_number = ? AND active = 1 AND id != ? LIMIT 1")
+    .get(c, excludeId ?? 0) as { id: number; sku: string; name: string; stock: number; grade: string | null; grade_company: string | null } | undefined;
+  return p
+    ? { exists: true, id: p.id, sku: p.sku, name: p.name, stock: p.stock, grade: p.grade ?? undefined, grade_company: p.grade_company ?? undefined }
+    : { exists: false };
+}
+
 /** Quick web-shop discount setter from the inventory list (no full edit form). */
 export async function setProductDiscountAction(formData: FormData) {
   const user = requireModule("inventory");

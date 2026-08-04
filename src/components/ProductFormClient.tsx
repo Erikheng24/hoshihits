@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "./icons";
+import { checkCertAction } from "@/app/(app)/inventory/actions";
 import { ScanCapture } from "./ScanCapture";
 import type { AiUsageLike } from "./AiBattery";
 import { fileToDataUrl } from "@/lib/image-client";
@@ -81,6 +82,22 @@ export function ProductFormClient({
     barcode: product.barcode ?? "",
   });
   const set = (patch: Partial<typeof f>) => setF((prev) => ({ ...prev, ...patch }));
+
+  // Warn if this slab's cert number is already in stock (same name, different cert
+  // is fine — a duplicate cert is not).
+  const [certWarn, setCertWarn] = useState<{ sku: string; name: string; stock: number; grade_company?: string; grade?: string } | null>(null);
+  useEffect(() => {
+    const cert = f.cert_number.trim();
+    if (f.category !== "graded" || !cert) { setCertWarn(null); return; }
+    let ok = true;
+    const t = setTimeout(async () => {
+      try {
+        const r = await checkCertAction(cert, editingId);
+        if (ok) setCertWarn(r.exists ? { sku: r.sku!, name: r.name!, stock: r.stock!, grade_company: r.grade_company, grade: r.grade } : null);
+      } catch { /* ignore */ }
+    }, 400);
+    return () => { ok = false; clearTimeout(t); };
+  }, [f.cert_number, f.category, editingId]);
 
   const scanMode: ScanMode = f.category === "graded" ? "graded" : f.category === "single" ? "single" : "sealed";
 
@@ -215,6 +232,16 @@ export function ProductFormClient({
         </label>
         <label className="field"><span>Grade</span><input name="grade" className="input" value={f.grade} onChange={(e) => set({ grade: e.target.value })} placeholder="10 / 9.5…" /></label>
         <label className="field"><span>Cert number</span><input name="cert_number" className="input num" value={f.cert_number} onChange={(e) => set({ cert_number: e.target.value })} /></label>
+        {certWarn && (
+          <div className="sm:col-span-2 rounded-lg border border-amberish/40 bg-amberish/10 px-3 py-2.5 text-[13px] text-amberish flex items-start gap-2">
+            <Icon name="scan" className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              <b>This card is already in stock.</b> Cert {f.cert_number.trim()} = <span className="num">{certWarn.sku}</span> — {certWarn.name}
+              {certWarn.grade_company ? ` (${certWarn.grade_company} ${certWarn.grade})` : ""}, <span className="num">{certWarn.stock}</span> in stock.
+              {editingId ? "" : " Saving will add a second copy with the same cert — use the existing one instead."}
+            </span>
+          </div>
+        )}
         <label className="field"><span>Barcode</span><input name="barcode" className="input num" value={f.barcode} onChange={(e) => set({ barcode: e.target.value })} /></label>
         <label className="field"><span>Sell price ($) *</span>
           <input name="price" type="number" step="0.01" min="0" required className="input num" defaultValue={product.price ? (product.price / 100).toFixed(2) : ""} />

@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
+import { QrScanner } from "@/components/QrScanner";
+import { extractCert } from "@/lib/cert";
 import { money } from "@/lib/format";
 import { checkoutAction, startKhqrPaymentAction, startCardPaymentAction, pollKhqrPaymentAction, cancelKhqrPaymentAction, manualCompletePaymentAction, type CheckoutResult } from "./actions";
 
 interface Product {
-  id: number; sku: string; barcode: string | null; name: string; game: string;
+  id: number; sku: string; barcode: string | null; cert_number: string | null; name: string; game: string;
   category: string; set_name: string | null; price: number; stock: number;
   grade_company: string | null; grade: string | null; condition: string | null;
   has_image: number;
@@ -44,6 +46,8 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
   const [now, setNow] = useState(() => Date.now());
   const searchRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanMsg, setScanMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -54,9 +58,30 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
         (!needle ||
           p.name.toLowerCase().includes(needle) ||
           p.sku.toLowerCase().includes(needle) ||
-          (p.barcode ?? "").includes(needle))
+          (p.barcode ?? "").includes(needle) ||
+          (p.cert_number ?? "").toLowerCase().includes(needle))
     );
   }, [products, q, game, cat]);
+
+  /** Camera scan → find the exact item by cert #, barcode or SKU → add to cart. */
+  function handleScan(text: string) {
+    setScanOpen(false);
+    const raw = text.trim();
+    const cert = extractCert(raw);
+    const found =
+      products.find((p) => p.cert_number && (p.cert_number === cert || p.cert_number === raw)) ||
+      products.find((p) => p.barcode && (p.barcode === raw || p.barcode === cert)) ||
+      products.find((p) => p.sku.toLowerCase() === raw.toLowerCase());
+    if (!found) {
+      setScanMsg({ ok: false, text: `No item found for “${cert || raw}”. Add it to inventory first.` });
+    } else if (found.stock < 1) {
+      setScanMsg({ ok: false, text: `${found.name} is out of stock.` });
+    } else {
+      add(found);
+      setScanMsg({ ok: true, text: `Added: ${found.name}${found.grade_company ? ` · ${found.grade_company} ${found.grade}` : ""}` });
+    }
+    setTimeout(() => setScanMsg(null), 3500);
+  }
 
   const inCart = (id: number) => lines.find((l) => l.product.id === id);
   const subtotal = lines.reduce((a, l) => a + l.product.price * l.qty, 0);
@@ -91,7 +116,7 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
     if (e.key !== "Enter") return;
     const needle = q.trim().toLowerCase();
     if (!needle) return;
-    const exact = products.find((p) => p.barcode === needle || p.sku.toLowerCase() === needle);
+    const exact = products.find((p) => p.barcode === needle || p.sku.toLowerCase() === needle || (p.cert_number ?? "").toLowerCase() === needle);
     const target = exact ?? (filtered.length === 1 ? filtered[0] : null);
     if (target) {
       add(target);
@@ -266,10 +291,13 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={onSearchKey}
               className="input pl-9"
-              placeholder="Search or scan barcode / SKU…"
+              placeholder="Search, or scan QR / barcode / SKU…"
               autoFocus
             />
           </div>
+          <button onClick={() => setScanOpen(true)} className="btn-gold px-3 py-2 text-sm shrink-0" title="Scan a slab QR / barcode with the camera">
+            <Icon name="scan" className="w-4 h-4" /> Scan
+          </button>
           <a
             href="/display"
             target="_blank"
@@ -603,6 +631,13 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
             </>
             )}
           </div>
+        </div>
+      )}
+
+      {scanOpen && <QrScanner onResult={handleScan} onClose={() => setScanOpen(false)} title="Scan slab QR to add" />}
+      {scanMsg && (
+        <div className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-[80] px-5 py-3 rounded-xl shadow-pop text-sm font-medium animate-rise ${scanMsg.ok ? "bg-jade/15 text-jade border border-jade/30" : "bg-ruby/15 text-ruby border border-ruby/30"}`}>
+          {scanMsg.text}
         </div>
       )}
     </div>

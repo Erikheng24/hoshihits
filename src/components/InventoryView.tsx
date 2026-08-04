@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { SearchToolbar } from "@/components/SearchToolbar";
 import { ProductFormClient } from "@/components/ProductFormClient";
 import { ScanToAddButton } from "@/components/ScanToAddButton";
+import { InventoryScanButton } from "@/components/InventoryScanButton";
 import { saveProductAction, adjustStockAction, archiveProductAction, setProductDiscountAction } from "@/app/(app)/inventory/actions";
 import { enrichScan, quickAddProductAction, identifyPhotoAction } from "@/app/(app)/inventory/enrich";
 
@@ -40,9 +41,9 @@ export function queryProducts(sp: InventorySearchParams, forcedCategory?: string
     args.push(sp.game);
   }
   if (sp.q) {
-    clauses.push("(name LIKE ? OR sku LIKE ? OR barcode LIKE ? OR set_name LIKE ?)");
+    clauses.push("(name LIKE ? OR sku LIKE ? OR barcode LIKE ? OR set_name LIKE ? OR cert_number LIKE ?)");
     const like = `%${sp.q}%`;
-    args.push(like, like, like, like);
+    args.push(like, like, like, like, like);
   }
   if (sp.stock === "low") clauses.push("stock <= low_stock");
   if (sp.stock === "out") clauses.push("stock = 0");
@@ -121,6 +122,7 @@ export function InventoryView({
         actions={
           <>
             <ReportActions section={mode === "single" ? "singles" : mode === "graded" ? "graded" : "inventory"} />
+            <InventoryScanButton basePath={basePath} />
             <ScanToAddButton enrich={enrichScan} quickAdd={quickAddProductAction} identify={identifyPhotoAction} games={GAMES} initialUsage={aiUsage} />
             <Link href={withParam("new", "1")} className="btn-ghost px-4 py-2 text-sm">
               <Icon name="plus" className="w-4 h-4" /> Add manually
