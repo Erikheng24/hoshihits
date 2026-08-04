@@ -17,13 +17,16 @@ export interface ShopProduct {
   grade: string | null;
   price: number;
   stock: number;
-  image: string | null;
+  has_image: number;        // 0/1 — the actual photo is served from /api/product-image/<id>
   image2?: string | null;   // loaded on-demand in the detail modal (keeps the list light)
   image3?: string | null;
   description?: string | null;
   discount_type: string | null;
   discount_value: number | null;
 }
+
+/** URL of a product photo (served as a cached image, not embedded in the query). */
+const imgUrl = (p: ShopProduct) => (p.has_image ? `/api/product-image/${p.id}` : "");
 
 const CATS = [
   { key: "", label: "All" },
@@ -142,7 +145,7 @@ export function ShopClient({
   promo,
 }: {
   products: ShopProduct[];
-  slideImages: Record<string, string[]>;
+  slideImages: Record<string, number[]>;
   slidePosters: Record<string, string>;
   shopName: string;
   tagline: string;
@@ -452,9 +455,9 @@ export function ShopClient({
               <button key={p.id} onClick={() => { setDetail(p); setDetailImg(0); }}
                 className="relative shop-card sx-card overflow-hidden shrink-0 w-40 sm:w-44 snap-start text-left">
                 <div className="aspect-[3/4] card-slot overflow-hidden relative">
-                  {p.image ? (
+                  {p.has_image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image} alt={p.name} className="shop-card-img w-full h-full object-contain p-2" />
+                    <img src={imgUrl(p)} alt={p.name} loading="lazy" className="shop-card-img w-full h-full object-contain p-2" />
                   ) : <span className="grid place-items-center h-full text-[#9CA3AF] text-3xl">★</span>}
                   <span className="absolute top-2 left-2 text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-jade/20 text-jade border border-jade/30">NEW</span>
                 </div>
@@ -529,9 +532,9 @@ export function ShopClient({
                 <div key={p.id} className={`shop-card sx-card overflow-hidden flex flex-col animate-rise ${soldOut ? "opacity-70" : ""}`} style={{ animationDelay: `${Math.min(i, 8) * 0.04}s` }}>
                   <div className="relative">
                     <button onClick={() => { setDetail(p); setDetailImg(0); setZoom(false); }} className="block aspect-[3/4] card-slot overflow-hidden w-full">
-                      {p.image ? (
+                      {p.has_image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.image} alt={p.name} className={`shop-card-img w-full h-full object-contain p-2.5 ${soldOut ? "grayscale" : ""}`} />
+                        <img src={imgUrl(p)} alt={p.name} loading="lazy" className={`shop-card-img w-full h-full object-contain p-2.5 ${soldOut ? "grayscale" : ""}`} />
                       ) : <span className="grid place-items-center h-full text-[#9CA3AF] text-4xl">★</span>}
                     </button>
                     {/* badges */}
@@ -637,7 +640,7 @@ export function ShopClient({
 /* ---------------------------------- Carousel --------------------------------- */
 function Carousel({ slide, setSlide, onCta, slideImages, slidePosters }: {
   slide: number; setSlide: (n: number) => void; onCta: (kind: string) => void;
-  slideImages: Record<string, string[]>; slidePosters: Record<string, string>;
+  slideImages: Record<string, number[]>; slidePosters: Record<string, string>;
 }) {
   const go = (d: number) => setSlide((slide + d + SLIDES.length) % SLIDES.length);
   return (
@@ -656,12 +659,12 @@ function Carousel({ slide, setSlide, onCta, slideImages, slidePosters }: {
           ) : imgs.length > 0 ? (
             <div className="absolute right-0 top-0 h-full w-[62%] sm:w-[55%] hidden sm:flex items-center justify-center pointer-events-none" aria-hidden="true">
               <div className="relative w-full h-full flex items-center justify-center">
-                {imgs.map((src, k) => {
+                {imgs.map((id, k) => {
                   const mid = (imgs.length - 1) / 2;
                   const off = k - mid;
                   return (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img key={k} src={src} alt=""
+                    <img key={k} src={`/api/product-image/${id}`} alt="" loading="lazy"
                       className="absolute w-28 lg:w-36 aspect-[3/4] object-cover rounded-xl ring-1 ring-white/20 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.85)]"
                       style={{ transform: `translateX(${off * 82}px) rotate(${off * 8}deg) translateY(${Math.abs(off) * 10}px)`, zIndex: 10 - Math.abs(off) }} />
                   );
@@ -825,7 +828,7 @@ function Detail({ p, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, toggleFa
     getProductExtrasAction(p.id).then((e) => { if (ok) setExtras(e); }).catch(() => {});
     return () => { ok = false; };
   }, [p.id]);
-  const imgs = [p.image, extras.image2, extras.image3].filter(Boolean) as string[];
+  const imgs = [imgUrl(p), extras.image2, extras.image3].filter(Boolean) as string[];
   const description = extras.description ?? p.description;
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -920,9 +923,9 @@ function CartDrawer({ lines, total, setQty, onClose, priceOfProduct, name, setNa
             <div className="space-y-2.5 mb-4">
               {lines.map((l) => { const lp = priceOfProduct(l.product); return (
                 <div key={l.product.id} className="flex items-center gap-3">
-                  {l.product.image ? (
+                  {l.product.has_image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={l.product.image} alt="" className="w-12 h-12 rounded-lg object-contain bg-[#0B1020] border border-[#27272A] shrink-0" />
+                    <img src={imgUrl(l.product)} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-contain bg-[#0B1020] border border-[#27272A] shrink-0" />
                   ) : <span className="w-12 h-12 rounded-lg bg-[#0B1020] grid place-items-center text-[#9CA3AF] shrink-0">★</span>}
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] text-white truncate">{l.product.name}</p>

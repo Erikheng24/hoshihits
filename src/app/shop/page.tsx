@@ -16,7 +16,7 @@ export default function ShopPage() {
   const products = db
     .prepare(
       `SELECT id, name, game, category, set_name, rarity, condition, grade_company, grade, price, stock,
-              image, discount_type, discount_value
+              (image IS NOT NULL AND image != '') AS has_image, discount_type, discount_value
        FROM products WHERE active = 1 ORDER BY id DESC`
     )
     .all() as ShopProduct[];
@@ -35,19 +35,19 @@ export default function ShopPage() {
 
   // Build each hero slide's collage from the shop's OWN product photos — real,
   // owned inventory (no third-party artwork). In-stock first, then anything.
-  const withImg = products.filter((p) => p.image);
-  const pickImgs = (pred: (p: ShopProduct) => boolean, n = 4): string[] => {
+  const withImg = products.filter((p) => p.has_image);
+  const pickIds = (pred: (p: ShopProduct) => boolean, n = 4): number[] => {
     const hit = withImg.filter(pred);
     const ranked = [...hit.filter((p) => p.stock > 0), ...hit.filter((p) => p.stock <= 0)];
-    const out = ranked.slice(0, n).map((p) => p.image!);
+    const out = ranked.slice(0, n).map((p) => p.id);
     // Fall back to any product photos so a themed slide is never empty.
-    if (out.length < 2) out.push(...withImg.slice(0, n - out.length).map((p) => p.image!));
+    if (out.length < 2) out.push(...withImg.slice(0, n - out.length).map((p) => p.id));
     return out.slice(0, n);
   };
-  const slideImages: Record<string, string[]> = {
-    pokemon: pickImgs((p) => /pok[eé]?mon/i.test(p.game)),
-    onepiece: pickImgs((p) => /one[\s-]?piece/i.test(p.game)),
-    accessory: pickImgs((p) => p.category === "accessory" || p.category === "sealed"),
+  const slideImages: Record<string, number[]> = {
+    pokemon: pickIds((p) => /pok[eé]?mon/i.test(p.game)),
+    onepiece: pickIds((p) => /one[\s-]?piece/i.test(p.game)),
+    accessory: pickIds((p) => p.category === "accessory" || p.category === "sealed"),
   };
   // Owner-uploaded poster per slide (Settings). Empty → the collage above shows.
   const poster = (k: string) => (setting(k).startsWith("data:image/") ? setting(k) : "");
