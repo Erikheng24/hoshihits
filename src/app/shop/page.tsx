@@ -1,6 +1,4 @@
 import { getDb } from "@/lib/db";
-import { getBranding } from "@/lib/branding";
-import { telegramConfigured } from "@/lib/providers/telegram";
 import { storeDiscountFrom } from "@/lib/pricing";
 import { ShopClient, type ShopProduct } from "./ShopClient";
 
@@ -23,9 +21,17 @@ export default function ShopPage() {
     )
     .all() as ShopProduct[];
 
-  const brand = getBranding();
-  const setting = (k: string) =>
-    (db.prepare("SELECT value FROM settings WHERE key=?").get(k) as { value: string } | undefined)?.value ?? "";
+  // Load ALL settings in ONE query (not ~20 separate reads). On a remote-read
+  // DB connection each query is a network round-trip, so batching turns a ~37s
+  // page into ~2s.
+  const settingsRows = db.prepare("SELECT key, value FROM settings").all() as { key: string; value: string }[];
+  const S = new Map(settingsRows.map((r) => [r.key, r.value]));
+  const setting = (k: string) => S.get(k) ?? "";
+  const brand = {
+    name: (setting("store_name") || "HoshiHits").trim(),
+    tagline: (setting("store_tagline") || "Card Shop ERP").trim(),
+    logo: setting("logo").startsWith("data:image/") ? setting("logo") : null,
+  };
 
   // Build each hero slide's collage from the shop's OWN product photos — real,
   // owned inventory (no third-party artwork). In-stock first, then anything.
@@ -63,7 +69,7 @@ export default function ShopPage() {
       phone={setting("store_phone")}
       address={setting("store_address")}
       telegramUser={setting("telegram_admin_username").replace(/^@/, "")}
-      telegramReady={telegramConfigured()}
+      telegramReady={!!((setting("telegram_bot_token") || process.env.TELEGRAM_BOT_TOKEN) && (setting("telegram_admin_chat_id") || process.env.TELEGRAM_ADMIN_CHAT_ID))}
       storeDiscount={storeDiscountFrom(setting("store_discount_type"), setting("store_discount_value"))}
       facebook={setting("shop_facebook")}
       channel={setting("shop_telegram_channel")}
