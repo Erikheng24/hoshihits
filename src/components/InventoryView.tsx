@@ -46,8 +46,17 @@ export function queryProducts(sp: InventorySearchParams, forcedCategory?: string
   }
   if (sp.stock === "low") clauses.push("stock <= low_stock");
   if (sp.stock === "out") clauses.push("stock = 0");
+  // Only the columns the list needs — NOT the base64 image data URLs (image,
+  // image2, image3), which are heavy over a remote DB read. Thumbnails load via
+  // /api/product-image/<id>. The edit modal still fetches the full row.
   return db
-    .prepare(`SELECT * FROM products WHERE ${clauses.join(" AND ")} ORDER BY game, name LIMIT 500`)
+    .prepare(
+      `SELECT id, sku, name, game, category, set_name, rarity, condition, language, foil,
+              grade_company, grade, cert_number, price, cost, stock, low_stock,
+              discount_type, discount_value,
+              (image IS NOT NULL AND image != '') AS has_image
+       FROM products WHERE ${clauses.join(" AND ")} ORDER BY game, name LIMIT 500`
+    )
     .all(...args) as any[];
 }
 
@@ -178,8 +187,9 @@ export function InventoryView({
                   <td className="num text-fog text-[12px]">{p.sku}</td>
                   <td>
                     <div className="flex items-center gap-2.5">
-                      {p.image ? (
-                        <img src={p.image} alt="" className="w-9 h-9 rounded-md object-cover border border-edge shrink-0" />
+                      {p.has_image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={`/api/product-image/${p.id}`} alt="" loading="lazy" className="w-9 h-9 rounded-md object-cover border border-edge shrink-0" />
                       ) : (
                         <span className="w-9 h-9 rounded-md bg-panel-2 border border-edge text-fog flex items-center justify-center shrink-0">
                           <Icon name={p.category === "graded" ? "graded" : p.category === "single" ? "card" : "inventory"} className="w-4 h-4" />

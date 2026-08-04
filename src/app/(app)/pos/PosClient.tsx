@@ -11,7 +11,7 @@ interface Product {
   id: number; sku: string; barcode: string | null; name: string; game: string;
   category: string; set_name: string | null; price: number; stock: number;
   grade_company: string | null; grade: string | null; condition: string | null;
-  image: string | null;
+  has_image: number;
 }
 interface Customer { id: number; name: string; phone: string | null }
 interface Line { product: Product; qty: number }
@@ -336,9 +336,9 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
                   )}
                   {/* Photo makes items recognisable at a glance when a customer asks for one */}
                   <div className="w-full aspect-[4/3] rounded-lg overflow-hidden bg-panel-2 border border-edge mb-2 flex items-center justify-center">
-                    {p.image ? (
+                    {p.has_image ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={`/api/product-image/${p.id}`} alt="" className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <Icon
                         name={p.category === "graded" ? "graded" : p.category === "single" ? "card" : "inventory"}
@@ -386,9 +386,9 @@ export function PosClient({ products, customers, games, cardGateway = false }: {
             {lines.length === 0 && <p className="text-fog text-sm text-center py-10">Tap products to add them.</p>}
             {lines.map((l) => (
               <div key={l.product.id} className="flex items-center gap-2">
-                {l.product.image ? (
+                {l.product.has_image ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={l.product.image} alt="" className="w-9 h-9 rounded-md object-cover border border-edge shrink-0" />
+                  <img src={`/api/product-image/${l.product.id}`} alt="" className="w-9 h-9 rounded-md object-cover border border-edge shrink-0" />
                 ) : (
                   <span className="w-9 h-9 rounded-md bg-panel-2 border border-edge text-fog/60 flex items-center justify-center shrink-0">
                     <Icon name="card" className="w-4 h-4" />
