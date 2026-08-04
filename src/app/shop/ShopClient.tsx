@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { money } from "@/lib/format";
 import { priceOf, type StoreDiscount } from "@/lib/pricing";
-import { placeWebOrderAction, type PlaceOrderResult } from "./actions";
+import { placeWebOrderAction, getProductExtrasAction, type PlaceOrderResult } from "./actions";
 
 export interface ShopProduct {
   id: number;
@@ -18,9 +18,9 @@ export interface ShopProduct {
   price: number;
   stock: number;
   image: string | null;
-  image2: string | null;
-  image3: string | null;
-  description: string | null;
+  image2?: string | null;   // loaded on-demand in the detail modal (keeps the list light)
+  image3?: string | null;
+  description?: string | null;
   discount_type: string | null;
   discount_value: number | null;
 }
@@ -40,7 +40,6 @@ const SORTS = [
 ];
 
 const catLabel = (k: string) => CATS.find((c) => c.key === k)?.label ?? k;
-const imgsOf = (p: ShopProduct) => [p.image, p.image2, p.image3].filter(Boolean) as string[];
 
 export interface Promo {
   title: string;
@@ -622,7 +621,7 @@ export function ShopClient({
         </button>
       )}
 
-      {detail && <Detail p={detail} imgs={imgsOf(detail)} idx={detailImg} setIdx={setDetailImg} zoom={zoom} setZoom={setZoom}
+      {detail && <Detail p={detail} idx={detailImg} setIdx={setDetailImg} zoom={zoom} setZoom={setZoom}
         qty={cart[detail.id] ?? 0} setQty={setQty} add={add} fav={favs.has(detail.id)} toggleFav={toggleFav} price={pr(detail)}
         onClose={() => setDetail(null)} onCart={() => { setDetail(null); setCartOpen(true); }} newest={newestIds.has(detail.id)} />}
 
@@ -810,8 +809,8 @@ function PromoBanner({ promo, hasPromo, fb, tg, ig, shopName }: {
   );
 }
 
-function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, toggleFav, price, onClose, onCart, newest }: {
-  p: ShopProduct; imgs: string[]; idx: number; setIdx: (n: number) => void; zoom: boolean; setZoom: (b: boolean) => void;
+function Detail({ p, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, toggleFav, price, onClose, onCart, newest }: {
+  p: ShopProduct; idx: number; setIdx: (n: number) => void; zoom: boolean; setZoom: (b: boolean) => void;
   qty: number; setQty: (id: number, q: number) => void; add: (id: number) => void; fav: boolean; toggleFav: (id: number) => void;
   price: ReturnType<typeof priceOf>;
   onClose: () => void; onCart: () => void; newest: boolean;
@@ -819,6 +818,15 @@ function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, to
   const soldOut = p.stock <= 0;
   const graded = p.grade_company && p.grade;
   const meta = [p.set_name, p.condition, p.rarity, p.game].filter(Boolean);
+  // The list query is kept light, so pull the 2nd/3rd photos + description now.
+  const [extras, setExtras] = useState<{ image2?: string | null; image3?: string | null; description?: string | null }>({});
+  useEffect(() => {
+    let ok = true;
+    getProductExtrasAction(p.id).then((e) => { if (ok) setExtras(e); }).catch(() => {});
+    return () => { ok = false; };
+  }, [p.id]);
+  const imgs = [p.image, extras.image2, extras.image3].filter(Boolean) as string[];
+  const description = extras.description ?? p.description;
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/85 animate-fadein" onClick={onClose} />
@@ -857,7 +865,7 @@ function Detail({ p, imgs, idx, setIdx, zoom, setZoom, qty, setQty, add, fav, to
             {price.onSale && <span className="text-[11px] font-bold text-jade">Save {money(price.off)}</span>}
           </div>
           <p className="text-[11px] text-[#9CA3AF] num mt-0.5">{soldOut ? "Currently unavailable" : `${p.stock} in stock`}</p>
-          {p.description && <p className="text-[13px] text-[#9CA3AF] mt-4 whitespace-pre-line leading-relaxed">{p.description}</p>}
+          {description && <p className="text-[13px] text-[#9CA3AF] mt-4 whitespace-pre-line leading-relaxed">{description}</p>}
           <div className="mt-6">
             {soldOut ? (
               <button disabled className="w-full py-3 rounded-lg border border-[#27272A] text-[#9CA3AF] cursor-not-allowed">Sold out</button>

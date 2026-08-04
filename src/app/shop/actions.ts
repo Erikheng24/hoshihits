@@ -30,6 +30,20 @@ export interface PlaceOrderResult {
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/**
+ * Fetch a single product's heavy extras (2nd/3rd photos + description) only when
+ * a customer opens its detail — keeps the shop LIST query small and fast.
+ */
+export async function getProductExtrasAction(
+  id: number
+): Promise<{ image2: string | null; image3: string | null; description: string | null }> {
+  const db = getDb();
+  const p = db
+    .prepare("SELECT image2, image3, description FROM products WHERE id = ? AND active = 1")
+    .get(Number(id)) as { image2: string | null; image3: string | null; description: string | null } | undefined;
+  return { image2: p?.image2 ?? null, image3: p?.image3 ?? null, description: p?.description ?? null };
+}
+
 /** Save a storefront order and notify the shop's Telegram. Never trusts client prices. */
 export async function placeWebOrderAction(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   const db = getDb();
