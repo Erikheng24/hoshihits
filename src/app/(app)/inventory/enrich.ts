@@ -1,7 +1,7 @@
 "use server";
 
 import { requireModule } from "@/lib/auth";
-import { getDb, audit, ts, getAiUsage, type AiUsage } from "@/lib/db";
+import { getDb, audit, ts, getAiUsage, nextSku, type AiUsage } from "@/lib/db";
 import type { EnrichResult, ItemKind } from "@/lib/scan";
 import { lookupPsaCert } from "@/lib/providers/psa";
 import { lookupUpc } from "@/lib/providers/upc";
@@ -121,8 +121,7 @@ export async function quickAddProductAction(
     const code =
       { "Pokémon": "PKM", "One Piece": "OPC", "Yu-Gi-Oh!": "YGO", "Weiss Schwarz": "WSC", "Union Arena": "UNA",
         Magic: "MTG", Digimon: "DGM", "Dragon Ball": "DBS", Gundam: "GCG", Accessories: "ACC" }[game] ?? "GEN";
-    const n = (db.prepare("SELECT COUNT(*) c FROM products").get() as { c: number }).c + 1;
-    const sku = `${code}-${String(n).padStart(4, "0")}`;
+    const sku = nextSku(code);
 
     // Positional params only — libsql's Turso write-forwarding binds @named to NULL.
     const r = db

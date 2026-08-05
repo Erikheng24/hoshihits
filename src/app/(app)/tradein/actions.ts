@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getDb, audit, nextNumber, ts } from "@/lib/db";
+import { getDb, audit, nextNumber, nextSku, ts } from "@/lib/db";
 import { requireModule } from "@/lib/auth";
 
 export interface TradeLine {
@@ -61,8 +61,7 @@ export async function createTradeinAction(input: TradeInput): Promise<TradeResul
            VALUES (?,?,?,'single',?,'EN',?,?,?,0,1,?)`
         );
         for (const l of lines) {
-          const n = (db.prepare("SELECT COUNT(*) c FROM products").get() as { c: number }).c + 1;
-          const sku = `${codeMap[l.game] ?? "GEN"}-${String(n).padStart(4, "0")}`;
+          const sku = nextSku(codeMap[l.game] ?? "GEN");
           // Default resale price: 40% markup over buy price, rounded to .00
           const price = Math.round((l.unitValueCents * 1.4) / 100) * 100;
           insProd.run(sku, l.name.trim(), l.game || "Pokémon", l.condition || "NM", price, l.unitValueCents, l.qty, ts());

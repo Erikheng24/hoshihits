@@ -601,6 +601,33 @@ let counterStmtReady = false;
 export function nextNumber(prefix: string, table: string, pad = 5): string {
   const db = getDb();
   if (!counterStmtReady) counterStmtReady = true;
-  const row = db.prepare(`SELECT COUNT(*) AS c FROM ${table}`).get() as { c: number };
-  return `${prefix}-${String(row.c + 1).padStart(pad, "0")}`;
+  // Base it on the HIGHEST existing suffix, not COUNT(*): deleted rows leave gaps,
+  // so counting would regenerate an existing number and hit the UNIQUE constraint.
+  const row = db
+    .prepare(`SELECT MAX(CAST(SUBSTR(number, INSTR(number, '-') + 1) AS INTEGER)) AS m FROM ${table}`)
+    .get() as { m: number | null };
+  let n = (row?.m ?? 0) + 1;
+  const exists = db.prepare(`SELECT 1 FROM ${table} WHERE number = ? LIMIT 1`);
+  let candidate = `${prefix}-${String(n).padStart(pad, "0")}`;
+  while (exists.get(candidate)) {
+    n += 1;
+    candidate = `${prefix}-${String(n).padStart(pad, "0")}`;
+  }
+  return candidate;
+}
+
+/** Next unique product SKU for a game code (same gap-safe approach as numbers). */
+export function nextSku(code: string): string {
+  const db = getDb();
+  const row = db
+    .prepare("SELECT MAX(CAST(SUBSTR(sku, INSTR(sku, '-') + 1) AS INTEGER)) AS m FROM products")
+    .get() as { m: number | null };
+  let n = (row?.m ?? 0) + 1;
+  const exists = db.prepare("SELECT 1 FROM products WHERE sku = ? LIMIT 1");
+  let sku = `${code}-${String(n).padStart(4, "0")}`;
+  while (exists.get(sku)) {
+    n += 1;
+    sku = `${code}-${String(n).padStart(4, "0")}`;
+  }
+  return sku;
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getDb, audit, ts } from "@/lib/db";
+import { getDb, audit, ts, nextSku } from "@/lib/db";
 import { requireModule } from "@/lib/auth";
 
 const PATHS = ["/inventory", "/singles", "/graded", "/pos", "/dashboard"];
@@ -106,8 +106,7 @@ export async function saveProductAction(formData: FormData) {
     const code =
       { "Pokémon": "PKM", "One Piece": "OPC", "Yu-Gi-Oh!": "YGO", "Weiss Schwarz": "WSC", "Union Arena": "UNA",
         Magic: "MTG", Digimon: "DGM", "Dragon Ball": "DBS", Gundam: "GCG", Accessories: "ACC" }[fields.game] ?? "GEN";
-    const n = (db.prepare("SELECT COUNT(*) c FROM products").get() as { c: number }).c + 1;
-    const sku = `${code}-${String(n).padStart(4, "0")}`;
+    const sku = nextSku(code);
     const r = db
       .prepare(
         `INSERT INTO products (sku, barcode, name, game, category, set_name, rarity, condition, language, foil,
