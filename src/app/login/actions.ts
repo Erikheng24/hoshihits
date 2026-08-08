@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getDb, audit } from "@/lib/db";
 import { verifyPassword } from "@/lib/hash";
 import { setSessionCookie, clearSessionCookie, getSession, type Role } from "@/lib/auth";
+import { IS_DEMO, DEMO_EMAIL } from "@/lib/demo";
 
 export interface LoginState {
   error?: string;
@@ -26,6 +27,18 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   setSessionCookie({ id: user.id, name: user.name, email: user.email, role: user.role });
   audit(user.id, "auth.login", "user", user.id);
+  redirect("/dashboard");
+}
+
+/** One-click sign-in as the demo owner (only on the demo/sandbox deployment). */
+export async function enterDemoAction() {
+  if (!IS_DEMO) redirect("/login");
+  const db = getDb();
+  const user = db
+    .prepare("SELECT id, name, email, role FROM users WHERE lower(email) = ?")
+    .get(DEMO_EMAIL) as { id: number; name: string; email: string; role: Role } | undefined;
+  if (!user) redirect("/login");
+  setSessionCookie({ id: user.id, name: user.name, email: user.email, role: user.role });
   redirect("/dashboard");
 }
 

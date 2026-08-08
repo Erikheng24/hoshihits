@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb, audit } from "@/lib/db";
 import { requireModule } from "@/lib/auth";
+import { IS_DEMO } from "@/lib/demo";
 import { testKhqr } from "@/lib/payments";
 import { sendTelegram, setWebhook } from "@/lib/providers/telegram";
 
@@ -112,6 +113,7 @@ const RESET_TABLES = [
 export async function resetDataAction(formData: FormData) {
   const user = requireModule("settings"); // settings is OWNER-only
   if (user.role !== "OWNER") redirect("/dashboard");
+  if (IS_DEMO) redirect("/settings?reset=demo"); // disabled in the demo sandbox
   if (String(formData.get("confirm") ?? "").trim().toUpperCase() !== "ERASE") {
     redirect("/settings?reset=badconfirm");
   }

@@ -142,6 +142,7 @@ export function ShopClient({
   telegramOrder,
   adminUser,
   bgImage,
+  isDemo,
   promo,
 }: {
   products: ShopProduct[];
@@ -163,6 +164,7 @@ export function ShopClient({
   telegramOrder: string;
   adminUser: string;
   bgImage: string;
+  isDemo: boolean;
   promo: Promo;
 }) {
   const [q, setQ] = useState("");
@@ -384,6 +386,7 @@ export function ShopClient({
               <span className="w-9 h-9 rounded-lg badge-foil grid place-items-center sx-amber text-sm">★</span>
             )}
             <span className="font-display tracking-[0.14em] text-gold-grad text-sm truncate">{shopName.toUpperCase()}</span>
+            {isDemo && <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#22d3ee]/20 text-[#22d3ee] border border-[#22d3ee]/40 shrink-0">DEMO</span>}
           </button>
           <div className="flex-1" />
           <button onClick={() => setCartOpen(true)} className="relative btn-ghost px-3.5 py-2 text-sm">

@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db";
 import { NAV } from "@/lib/nav";
 import { Sidebar, MobileNav, MobileTabBar } from "@/components/Sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
+import { DemoBanner } from "@/components/DemoBanner";
 import { logoutAction } from "@/app/login/actions";
 import { Icon } from "@/components/icons";
 
@@ -35,6 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <Sidebar items={items} brand={brand} badges={badges} />
       <div className="flex-1 min-w-0 flex flex-col">
+        <DemoBanner />
         <header className="sticky top-0 z-30 glass border-b border-edge no-print">
           <div className="flex items-center gap-3 px-4 sm:px-6 h-14">
             <MobileNav items={items} brand={brand} badges={badges} />

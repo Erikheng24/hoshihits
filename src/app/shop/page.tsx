@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getDb } from "@/lib/db";
+import { IS_DEMO } from "@/lib/demo";
 import { storeDiscountFrom } from "@/lib/pricing";
 import { ShopClient, type ShopProduct } from "./ShopClient";
 
@@ -100,6 +101,7 @@ export default function ShopPage() {
       telegramOrder={setting("shop_telegram_order")}
       adminUser={setting("telegram_admin_username").replace(/^@/, "")}
       bgImage={setting("shop_bg_image").startsWith("data:image/") ? setting("shop_bg_image") : ""}
+      isDemo={IS_DEMO}
       promo={{
         title: setting("promo_title"),
         text: setting("promo_text"),

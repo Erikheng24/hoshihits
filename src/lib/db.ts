@@ -3,6 +3,7 @@ import Database from "libsql";
 import path from "path";
 import fs from "fs";
 import { hashPassword } from "./hash";
+import { IS_DEMO, seedDemo } from "./demo";
 import { seed } from "./seed";
 
 /** The libsql connection type (API-compatible with better-sqlite3). */
@@ -402,6 +403,9 @@ export function getDb(): DbConn {
 
   db.exec(SCHEMA);
   migrate(db);
+
+  // Demo/sandbox deployment: seed sample data into the (isolated, local) DB.
+  if (IS_DEMO) { try { seedDemo(db as unknown as Parameters<typeof seedDemo>[0]); } catch (e) { console.error("[demo seed]", e); } }
 
   // One-time migration: copy a legacy on-disk SQLite database into Turso. Runs
   // only when MIGRATE_LOCAL_TO_TURSO=1, Turso is the backend, and Turso is still
